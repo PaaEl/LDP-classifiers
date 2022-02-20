@@ -1,0 +1,153 @@
+import math
+import random
+
+from sklearn import metrics
+import numpy as np
+from sklearn import tree
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+from pure_ldp.frequency_oracles import LHClient, LHServer
+
+# categorize and bin data
+train_df = pd.read_csv("./Dataset/adult.data", header='infer')
+train_df.workclass = pd.Categorical(train_df.workclass)
+train_df.workclass = train_df.workclass.cat.codes
+train_df.education = pd.Categorical(train_df.education)
+train_df.education = train_df.education.cat.codes
+train_df.marital_status = pd.Categorical(train_df.marital_status)
+train_df.marital_status = train_df.marital_status.cat.codes
+train_df.occupation = pd.Categorical(train_df.occupation)
+train_df.occupation = train_df.occupation.cat.codes
+train_df.relationship = pd.Categorical(train_df.relationship)
+train_df.relationship = train_df.relationship.cat.codes
+train_df.race = pd.Categorical(train_df.race)
+train_df.race = train_df.race.cat.codes
+train_df.sex = pd.Categorical(train_df.sex)
+train_df.sex = train_df.sex.cat.codes
+train_df.native_country = pd.Categorical(train_df.native_country)
+train_df.native_country = train_df.native_country.cat.codes
+train_df.income = pd.Categorical(train_df.income)
+train_df.income = train_df.income.cat.codes
+train_df.age = pd.qcut(train_df.age, q=10, labels=False, duplicates='drop')
+train_df.fnlwgt = pd.qcut(train_df.fnlwgt, q=10, labels=False)
+train_df.capital_gain = pd.cut(train_df.capital_gain,10, labels=False)
+train_df.capital_loss = pd.cut(train_df.capital_loss,10, labels=False)
+train_df.hours_per_week = pd.qcut(train_df.hours_per_week, q=10, labels=False, duplicates='drop')
+
+# run pandas decision tree
+T = train_df.iloc[:, 0:-1]
+Y = train_df.iloc[:, -1:]
+print(train_df)
+X_train1, X_test1, y_train1, y_test1 = train_test_split(T, Y, test_size=0.33, random_state=42)
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(X_train1, y_train1)
+predict1 = clf.predict(X_test1)
+print("Accuracy:", metrics.accuracy_score(y_test1, predict1))
+# print(max(train_df.age))
+# print(train_df.age.value_counts())
+# these settings have to be adjusted below
+epsilon = 10
+d = 10
+client_olh = LHClient(epsilon=epsilon, d=d, use_olh=True)
+server_olh = LHServer(epsilon=epsilon, d=d, use_olh=True)
+server_olh2 = LHServer(epsilon=epsilon, d=d, use_olh=True)
+
+# def hash_and_perturb(io):
+#     g = client_olh.privatise(io)
+#     server_olh.aggregate(g)
+#     return g[0]
+# returns random value of the support of an encoded and perturbed value
+def hash_and_perturb_return_most_likely(io, e, d):
+    g = client_olh.privatise(io)
+    server_olh.aggregate(g)
+    server_olh2.update_params(e,d)
+    server_olh2.aggregate(g)
+    # return np.argmax(server_olh2.aggregated_data)
+    winner = np.argwhere(server_olh2.aggregated_data == np.amax(server_olh2.aggregated_data))
+    return np.random.choice(winner.flatten())
+    # olh_estimates = []
+    # for i in range(0, d):
+    #     olh_estimates.append(round(server_olh2.estimate(i)))
+    #
+    # return np.argmax(olh_estimates)
+# print(train_df.columns)
+# encode and perturb data
+perturbed_df = pd.DataFrame()
+list_estimates = [[]]
+list_aggregates = [[]]
+for x in train_df.columns:
+    if x == 'income':
+        perturbed_df[x] = train_df.loc[:, x]
+    else:
+        epsilon = 10
+        d = max(train_df[x]) + 1
+        # print(d)
+        olh_estimates = []
+        server_olh.update_params(epsilon, d)
+        client_olh.update_params(epsilon, d)
+        tempColumn = train_df.loc[:,x].apply(lambda item: hash_and_perturb_return_most_likely(item + 1, epsilon, d))
+        perturbed_df[x] = tempColumn
+        # print('where')
+        # print(server_olh.aggregated_data)
+        list_aggregates.append(server_olh.aggregated_data)
+        for i in range(0, d):
+            olh_estimates.append(round(server_olh.estimate(i + 1)))
+        list_estimates.append(olh_estimates)
+
+print('perturbed_df')
+print(perturbed_df)
+print('list_estimates')
+print(list_estimates)
+# print('list_aggregates')
+# print(list_aggregates)
+print('compare aggregates with estimates')
+print(perturbed_df.age.value_counts())
+print(list_estimates[1])
+
+# ttest pandas decision tree trained on perturbed data
+T = perturbed_df.iloc[:, 0:-1]
+Y = perturbed_df.iloc[:, -1:]
+X_train1, X_test2, y_train1, y_test2 = train_test_split(T, Y, test_size=0.33, random_state=42)
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(X_train1, y_train1)
+predict1 = clf.predict(X_test1)
+print("Accuracy on unperturbed data:", metrics.accuracy_score(y_test1, predict1))
+clf = tree.DecisionTreeClassifier()
+clf = clf.fit(X_train1, y_train1)
+predict1 = clf.predict(X_test2)
+print("Accuracy on perturbed data:", metrics.accuracy_score(y_test2, predict1))
+# baaaaa2 = pd.DataFrame()
+# b2 = [[]]
+# ag2 = [[]]
+# for x in train_df.columns:
+#     if x == 'income':
+#         baaaaa2[x] = train_df.loc[:,x]
+#     else:
+#         d = max(train_df[x]) + 1
+#         print(d)
+#         olh_estimates = []
+#         server_olh.update_params(epsilon=10, d=d)
+#         client_olh.update_params(epsilon=10, d=d)
+#         tempColumn = train_df.loc[:,x].apply(lambda item: hash_and_perturb(item + 1))
+#         baaaaa2[x] = tempColumn
+#         ag2.append(server_olh.aggregated_data)
+#         for i in range(0, d):
+#             olh_estimates.append(round(server_olh.estimate(i + 1)))
+#         b2.append(olh_estimates)
+#
+# print('baaaaa2')
+# print(baaaaa2)
+# print('b2')
+# print(b2)
+# print('agg')
+# print(ag2)
+#
+# x = train_df.to_numpy()
+# print(x)
+# l=[]
+# olh_estimates = []
+# xx = np.vectorize(lambda item : client_olh.privatise(item))
+# #privatised array
+# print(xx(x)[0])
+#now a function to get the aggregate of the examples you have for each round of the tree algo and an estimate
