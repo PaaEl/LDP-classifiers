@@ -31,7 +31,7 @@ class LDPLogReg(BaseEstimator):
         self.LDPid = LDPid
     
     def __str__(self):
-        return "Logistic Regression Classifier"
+        return "Logistic Regression Classifier_" + self.LDPid
 
     def fit(self, X, y):
         """A reference implementation of a fitting function.
@@ -115,7 +115,7 @@ class LDPLogReg(BaseEstimator):
             # USE MEAN TO UPDATE WEIGHTS
             tempWeights = tempWeights + self.learning_rate * meanGradient
             # REGULARIZATION STEP
-            tempWeights = tempWeights - self.learning_rate * (0.6 / len(y)) * tempWeights     # TODO check optimal regression value. Now 0.6
+            tempWeights = tempWeights - self.learning_rate * (0.6 / len(y)) * tempWeights     # TODO check optimal regularization value. Now 0.6
         return tempWeights
 
     def _predictSingle(self, X, weights):

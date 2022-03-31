@@ -83,7 +83,7 @@ class DataPreprocessor:
         None
         """
         if (self.continuous_features):
-            encoder = KBinsDiscretizer(n_bins=n, encode="ordinal", strategy='quantile')
+            encoder = KBinsDiscretizer(n_bins=n, encode="ordinal", strategy='uniform')
             self.X.loc[:,self.continuous_features] =  encoder.fit_transform(self.X.loc[:, self.continuous_features])
 
     """ Clean the data by resetting index and randomizing the order

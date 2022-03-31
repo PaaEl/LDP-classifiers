@@ -12,7 +12,7 @@ class LDPNaiveBayes(BaseEstimator):
         self.LDPid = LDPid
     
     def __str__(self):
-        return "Naive Bayes Classifier"
+        return "Naive Bayes Classifier_" + self.LDPid
 
     def fit(self, X, y):
         if issparse(X):
@@ -128,7 +128,10 @@ class LDPNaiveBayes(BaseEstimator):
                 classProb = self._classProbabilities[classVal]
                 featureProb = 1
                 for i, val in enumerate(X[row]):
-                    featureProb = featureProb * self._featureProbabilities[classVal][i][int(val)]
+                    try:
+                        featureProb = featureProb * self._featureProbabilities[classVal][i][int(val)]
+                    except IndexError:
+                        featureProb = featureProb
                 prediction.append(classProb * featureProb)
             results.append(prediction.index(max(prediction)))
         return results

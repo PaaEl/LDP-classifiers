@@ -1,6 +1,8 @@
+from datetime import date
 from LDPNaiveBayes import LDPNaiveBayes
 from DataPreprocessor import DataPreprocessor
 from sklearn.model_selection import cross_validate
+import pandas as pd
 
 class TestSuite():
     def __init__(self, epsilon_values=[0.1,1,2], classifiers=[LDPNaiveBayes(LDPid='LH')]):
@@ -8,7 +10,7 @@ class TestSuite():
         self.classifiers = classifiers
         self.preprocessor = DataPreprocessor()
 
-    """ Sets the specific parameters that will need to be evaluated
+    """ set_params: Sets the specific parameters that will need to be evaluated
     Parameters
     ----------
     epsilon_values : {array} 
@@ -24,7 +26,7 @@ class TestSuite():
         self.epsilon_values = epsilon_values
         self.classifiers = classifiers
 
-    """ Sets the specific parameters that will need to be evaluated
+    """ set_database_params: Sets the specific parameters that will need to be evaluated
     Parameters
     ----------
     database_location : {string}
@@ -40,10 +42,11 @@ class TestSuite():
     -------
     None
     """
-    def set_database_params(self, database_location, categorical_features, target_feature, continuous_features=[]):
+    def set_database_params(self, database_location, categorical_features=[], target_feature=[], continuous_features=[], database_name=''):
         self.preprocessor.set_data_info(database_location, categorical_features, target_feature, continuous_features)
+        self.database_name = database_name
 
-    """ Runs the test suite for each value of the given parameters
+    """ run: Runs the test suite for each value of the given parameters
     Parameters
     ----------
     None
@@ -55,28 +58,29 @@ class TestSuite():
     """
     def run(self):
         X, y = self.preprocessor.get_data()
+        allScoresDataFrame = pd.DataFrame()
         for classifier in self.classifiers:
-            print(classifier)
+            classifierDataFrame = pd.DataFrame()
             for epsilon_value in self.epsilon_values:
                 classifier.set_params(epsilon=epsilon_value)
                 scores = cross_validate(classifier, X, y, scoring=['balanced_accuracy','f1_macro', 'precision_macro', 'recall_macro'])
-                self.print_scores(scores, epsilon_value)
+                scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
+                scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
+                rowName = classifier.__str__() + '/' + self.database_name + '/'
+                scoresDataFrame = scoresDataFrame.add_prefix(rowName)
+                classifierDataFrame[epsilon_value] = scoresDataFrame
+            allScoresDataFrame = allScoresDataFrame.append(classifierDataFrame)
+        self.print_scores(allScoresDataFrame)
 
-    """ Prints the scores in a specific format
+    """ print_scores: Prints the scores in a specific format to a csv file
     Parameters
     ----------
     scores : {array}
              Score values accuracy, f1, precision and recall
-    epsilon : {float}
-              The epsilon value used to obtain the scores
-              
+
     Returns
     -------
     None
     """
-    def print_scores(self, scores, epsilon):
-        print("Epsilon value: ", epsilon)
-        print('-'*50)
-        print("Accuracy: ", scores['test_balanced_accuracy'].mean())
-        print("Recall: ", scores['test_recall_macro'].mean())
-        print("Precision: ", scores['test_precision_macro'].mean())
+    def print_scores(self, scores):
+        scores.to_csv("../Experiments/test_run_" + date.today().__str__() + '.csv', sep=';', float_format='%.3f')
