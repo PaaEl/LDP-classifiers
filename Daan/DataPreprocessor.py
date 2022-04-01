@@ -9,20 +9,24 @@ class DataPreprocessor:
         self.target_features = target_features
         self.continuous_features = continuous_features
     
-    """ Process and return the X and y values
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    X, y : ndarray, shape (n_samples,)
-            Returns X and y
     
-    """
-    def get_data(self):
+    def get_data(self, onehotencoded=False):
+        """ Process and return the X and y values
+        Parameters
+        ----------
+        onehotencoded : bool, default: False
+                        Specifies if data needs to be one hot encoded
+
+        Returns
+        -------
+        X, y : ndarray, shape (n_samples,)
+                Returns X and y
+        
+        """
         self.X, self.y = self._get_raw_data()
         self._label_encode()
+        if onehotencoded:
+            self._one_hot_encode()
         self._bin_encode(10)
         self._clean_up()
         return self.X, self.y
@@ -61,15 +65,27 @@ class DataPreprocessor:
         """
         X_encoder = OrdinalEncoder()
         y_encoder = LabelEncoder()
-        self.X.loc[:,self.categorical_features] =  X_encoder.fit_transform(self.X.loc[:, self.categorical_features])
 
+        self.X.loc[:,self.categorical_features] =  X_encoder.fit_transform(self.X.loc[:, self.categorical_features])
+        self.y = y_encoder.fit_transform(self.y.values.ravel())
+
+    def _one_hot_encode(self):
+        """ One hot encode encode the categorical data
+
+        Parameters
+        ----------
+        None
+        
+        Returns
+        -------
+        None
+        """
         encoder = OneHotEncoder()
         encoder.fit(pd.DataFrame(self.X.loc[:, self.categorical_features]))
         columnNames = encoder.get_feature_names_out()
-        tempX = pd.DataFrame(encoder.transform(pd.DataFrame(self.X.loc[:, self.categorical_features])).toarray(), columns=columnNames)
+        tempXdata = pd.DataFrame(encoder.transform(pd.DataFrame(self.X.loc[:, self.categorical_features])).toarray(), columns=columnNames)
         self.X = self.X.drop(self.categorical_features, axis=1)
-        self.X.loc[:,columnNames] = tempX
-        self.y = y_encoder.fit_transform(self.y.values.ravel())
+        self.X.loc[:,columnNames] = tempXdata
 
     def _bin_encode(self, n):
         """ Bin continuous data into n numer of bins
