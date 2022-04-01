@@ -22,9 +22,10 @@ class TestSuite():
     -------
     None
     """
-    def set_params(self, epsilon_values, classifiers):
+    def set_params(self, epsilon_values, classifiers, onehotencoded=False):
         self.epsilon_values = epsilon_values
         self.classifiers = classifiers
+        self.onehotencoded = onehotencoded
 
     """ set_database_params: Sets the specific parameters that will need to be evaluated
     Parameters
@@ -57,7 +58,7 @@ class TestSuite():
     
     """
     def run(self):
-        X, y = self.preprocessor.get_data()
+        X, y = self.preprocessor.get_data(onehotencoded=self.onehotencoded)
         allScoresDataFrame = pd.DataFrame()
         for classifier in self.classifiers:
             classifierDataFrame = pd.DataFrame()
