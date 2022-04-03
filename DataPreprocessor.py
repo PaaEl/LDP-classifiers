@@ -1,13 +1,12 @@
+import os
 import pandas as pd
+import json
 from sklearn.preprocessing import OrdinalEncoder, KBinsDiscretizer, LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 
 class DataPreprocessor:
-    def __init__(self, data_location='', categorical_features=[], target_features=[], continuous_features=[]):
-        self.data_location = data_location
-        self.categorical_features = categorical_features
-        self.target_features = target_features
-        self.continuous_features = continuous_features
+    def __init__(self, database_name=''):
+        self.database_name = database_name
     
     
     def get_data(self, onehotencoded=False):
@@ -31,8 +30,21 @@ class DataPreprocessor:
         self._clean_up()
         return self.X, self.y
 
-    def set_data_info(self, data_location, categorical_features, target_features, continuous_features=[]):
-        self.__init__(data_location, categorical_features, target_features, continuous_features)
+    def _set_data_info(self, database_info):
+        """ Sets the names of the different types of features
+
+        Parameters
+        ----------
+        database_info : JSON format
+            Specifies categorical_features, target_features and continuous_features
+        
+        Returns
+        -------
+        None
+        """
+        self.categorical_features = database_info['categorical_features']
+        self.target_features = database_info['target_features']
+        self.continuous_features = database_info['continuous_features']
 
     def _get_raw_data(self):
         """ Get the data from the data location
@@ -46,11 +58,22 @@ class DataPreprocessor:
         X, y : ndarray, shape (n_samples,)
             Returns the data split into X and y
         """
-        raw_data = pd.read_csv(self.data_location)
-        all_features = self.categorical_features + self.continuous_features
+        database_info = self._get_database_info()[self.database_name]
+        database_location = os.path.abspath(os.getcwd() + "/Datasets/" + self.database_name + ".data")
+        self._set_data_info(database_info)
+
+        raw_data = pd.read_csv(database_location)
+        all_features = database_info["categorical_features"] + database_info["continuous_features"]
+        # raw_data = pd.read_csv(self.data_location)
+        # all_features = self.categorical_features + self.continuous_features
         X = raw_data.loc[:, all_features]
-        y = raw_data[self.target_features]
+        y = raw_data[database_info["target_features"]]
+        # y = raw_data[self.target_features]
         return X, y
+
+    def _get_database_info(self):
+        file = open("./Datasets/database_info.json", 'r')
+        return json.load(file)
 
     def _label_encode(self):
         """ Label encode the categorical data into numerical values
