@@ -1,0 +1,42 @@
+{
+    "adult": {
+        "categorical_features": ["workclass", "education", "marital-status", "occupation", "relationship", "race", "sex"],
+        "continuous_features": ["age", "fnlwgt", "education-num", "hours-per-week"],
+        "target_features": ["income"]
+    },
+    "mushroom": {
+        "categorical_features": ["cap-shape", "cap-surface", "cap-color", "bruises", "odor", "gill-attachment", "gill-spacing", "gill-size", "gill-color", "stalk-shape", "stalk-root", "stalk-surface-above-ring", "stalk-surface-below-ring", "stalk-color-above-ring", "stalk-color-below-ring", "veil-type", "veil-color", "ring-number", "ring-type", "spore-print-color", "population", "habitat"],
+        "continuous_features": [],
+        "target_features": ["classification"]
+    },
+    "spect": {
+        "categorical_features": ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13", "f14", "f15", "f16", "f17", "f18", "f19", "f20", "f21", "f22"],
+        "continuous_features": [],
+        "target_features": ["classification"]
+    },
+    "vote": {
+        "categorical_features": ["hi", "wpcs", "aobr", "pff", "esa", "rgis", "astb", "atnc", "mm", "i", "scc", "es", "srts", "c", "dfe", "eaas"],
+        "continuous_features": [],
+        "target_features": ["classification"]
+    },
+    "nursery": {
+        "categorical_features": ["parents", "has_nurs", "form", "children", "housing", "finance", "social", "health"],
+        "continuous_features": [],
+        "target_features": ["classification"]
+    },
+    "car": {
+        "categorical_features": ["buying", "maint", "doors", "persons", "lug_boot", "safety"],
+        "continuous_features": [],
+        "target_features": ["classification"]
+    },
+    "htru": {
+        "categorical_features": [],
+        "continuous_features": ["mean_prof", "std_dev", "kurtosis", "skewness", "mean_dm_snr", "std_dev_dm_snr", "kurosis_dm_snr", "skewness_dm_snr"],
+        "target_features": ["classification"]
+    },
+    "iris": {
+        "categorical_features": [],
+        "continuous_features": ["sepal_width", "sepal_length", "petal_width", "petal_length"],
+        "target_features": ["classification"]
+    }
+}
