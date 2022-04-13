@@ -5,11 +5,7 @@ from sklearn.preprocessing import OrdinalEncoder, KBinsDiscretizer, LabelEncoder
 from sklearn.model_selection import train_test_split
 
 class DataPreprocessor:
-    def __init__(self, database_name=''):
-        self.database_name = database_name
-    
-    
-    def get_data(self, onehotencoded=False):
+    def get_data(self, database_name, onehotencoded=False):
         """ Process and return the X and y values
         Parameters
         ----------
@@ -22,7 +18,7 @@ class DataPreprocessor:
                 Returns X and y
         
         """
-        self.X, self.y = self._get_raw_data()
+        self.X, self.y = self._get_raw_data(database_name)
         self._label_encode()
         if onehotencoded:
             self._one_hot_encode()
@@ -46,7 +42,7 @@ class DataPreprocessor:
         self.target_features = database_info['target_features']
         self.continuous_features = database_info['continuous_features']
 
-    def _get_raw_data(self):
+    def _get_raw_data(self, database_name):
         """ Get the data from the data location
 
         Parameters
@@ -58,17 +54,14 @@ class DataPreprocessor:
         X, y : ndarray, shape (n_samples,)
             Returns the data split into X and y
         """
-        database_info = self._get_database_info()[self.database_name]
-        database_location = os.path.abspath(os.getcwd() + "/Datasets/" + self.database_name + ".data")
+        database_info = self._get_database_info()[database_name]
+        database_location = os.path.abspath(os.getcwd() + "/Datasets/" + database_name + ".data")
         self._set_data_info(database_info)
 
         raw_data = pd.read_csv(database_location)
         all_features = database_info["categorical_features"] + database_info["continuous_features"]
-        # raw_data = pd.read_csv(self.data_location)
-        # all_features = self.categorical_features + self.continuous_features
         X = raw_data.loc[:, all_features]
         y = raw_data[database_info["target_features"]]
-        # y = raw_data[self.target_features]
         return X, y
 
     def _get_database_info(self):
@@ -123,7 +116,7 @@ class DataPreprocessor:
         """
         if (self.continuous_features):
             encoder = KBinsDiscretizer(n_bins=n, encode="ordinal", strategy='uniform')
-            self.X.loc[:,self.continuous_features] =  encoder.fit_transform(self.X.loc[:, self.continuous_features])
+            self.X.loc[:,self.continuous_features] = encoder.fit_transform(self.X.loc[:, self.continuous_features])
 
     """ Clean the data by resetting index and randomizing the order
 
