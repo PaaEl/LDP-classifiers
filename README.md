@@ -1,4 +1,5 @@
-```from Daan.LDPLogReg import LDPLogReg
+```
+from Daan.LDPLogReg import LDPLogReg
 from Daan.LDPNaiveBayes import LDPNaiveBayes
 from TestSuite import TestSuite
 
