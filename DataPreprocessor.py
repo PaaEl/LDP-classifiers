@@ -9,6 +9,8 @@ class DataPreprocessor:
         """ Process and return the X and y values
         Parameters
         ----------
+        database_name : string,
+                        Specifies the database name to be used. Should be the same as the .data filename in the Datasets folder
         onehotencoded : bool, default: False
                         Specifies if data needs to be one hot encoded
 
@@ -47,7 +49,8 @@ class DataPreprocessor:
 
         Parameters
         ----------
-        None
+        database_name : string
+                        Specifies the database name. Should be the same as the .data filename in the Datasets folder
         
         Returns
         -------
