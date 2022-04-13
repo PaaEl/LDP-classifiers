@@ -6,6 +6,16 @@ import pandas as pd
 
 class TestSuite():
     def __init__(self, database_names, epsilon_values=[0.1,1,2], classifiers=[LDPNaiveBayes(LDPid='LH')]):
+        """
+        Parameters
+        ----------
+        database_names : array of strings
+                         Specifies the databases to be tested on
+        epsilon_values : array of floats
+                         The epsilon values to be tested on
+        classifiers : array of Classifier objects
+                      The classifiers to be used. Should be deriving from SKlearn BaseEstimator.
+        """
         self.database_names = database_names
         self.epsilon_values = epsilon_values
         self.classifiers = classifiers
