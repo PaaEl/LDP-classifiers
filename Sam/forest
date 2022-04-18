@@ -1,0 +1,286 @@
+import scipy
+from sklearn import metrics
+import numpy as np
+from sklearn import tree
+import pandas as pd
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split, cross_val_score
+
+from pure_ldp.frequency_oracles import LHClient, LHServer
+
+# categorize and bin data
+train_df = pd.read_csv("./Dataset/adult.data", header='infer')
+train_df.workclass = pd.Categorical(train_df.workclass)
+train_df.workclass = train_df.workclass.cat.codes
+train_df.education = pd.Categorical(train_df.education)
+train_df.education = train_df.education.cat.codes
+train_df.marital_status = pd.Categorical(train_df.marital_status)
+train_df.marital_status = train_df.marital_status.cat.codes
+train_df.occupation = pd.Categorical(train_df.occupation)
+train_df.occupation = train_df.occupation.cat.codes
+train_df.relationship = pd.Categorical(train_df.relationship)
+train_df.relationship = train_df.relationship.cat.codes
+train_df.race = pd.Categorical(train_df.race)
+train_df.race = train_df.race.cat.codes
+train_df.sex = pd.Categorical(train_df.sex)
+train_df.sex = train_df.sex.cat.codes
+train_df.native_country = pd.Categorical(train_df.native_country)
+train_df.native_country = train_df.native_country.cat.codes
+train_df.income = pd.Categorical(train_df.income)
+train_df.income = train_df.income.cat.codes
+train_df.age = pd.qcut(train_df.age, q=10, labels=False, duplicates='drop')
+train_df.fnlwgt = pd.qcut(train_df.fnlwgt, q=10, labels=False)
+train_df.capital_gain = pd.cut(train_df.capital_gain,10, labels=False)
+train_df.capital_loss = pd.cut(train_df.capital_loss,10, labels=False)
+train_df.hours_per_week = pd.qcut(train_df.hours_per_week, q=10, labels=False, duplicates='drop')
+
+# run pandas decision tree
+T = train_df.iloc[:, 0:-1]
+Y = train_df.iloc[:, -1:]
+print(train_df)
+X_train1, X_test1, y_train1, y_test1 = train_test_split(T, Y, test_size=0.33, random_state=22)
+clf = RandomForestClassifier()
+clf = clf.fit(X_train1, y_train1)
+predict1 = clf.predict(X_test1)
+# scores = cross_val_score(clf, T, Y, cv=10)
+# print('scores')
+# print(scores)
+# print(scores.mean())
+print("Accuracy:", metrics.accuracy_score(y_test1, predict1))
+print(max(train_df.age))
+print(train_df.age.value_counts())
+print(train_df.workclass.value_counts())
+
+epsilon = 10
+d = 10
+client_olh = LHClient(epsilon=epsilon, d=d, use_olh=True)
+server_olh = LHServer(epsilon=epsilon, d=d, use_olh=True)
+server_olh2 = LHServer(epsilon=epsilon, d=d, use_olh=True)
+
+# def hash_and_perturb(io):
+#     g = client_olh.privatise(io)
+#     server_olh.aggregate(g)
+#     return g[0]
+# returns random value of the support of an encoded and perturbed value
+def hash_perturb(io):
+    g = client_olh.privatise(io)
+    server_olh.aggregate(g)
+    return g
+
+def hash_perturb_get0(io):
+    return io[0]
+
+def recategorize(io, e, d):
+    # g = client_olh.privatise(io)
+    # server_olh.aggregate(g)
+    # server_olh2.update_params(e,d)
+    server_olh2.aggregate(io)
+    # # return np.argmax(server_olh2.aggregated_data)
+    # winner = np.argwhere(server_olh2.aggregated_data == np.amax(server_olh2.aggregated_data))
+    # return np.random.choice(winner.flatten())
+    # olh_estimates2 = []
+    # add 1 to i
+    huu = np.array(olh_estimates2)
+    # print('huuu')
+    # print(huu)
+    for i in range(1, d+1):
+        olh_estimates2[i-1] = round(server_olh2.estimate(i,True))
+    huu2 = np.subtract(olh_estimates2, huu)
+    # print('olh')
+    # print(olh_estimates2)
+    # print('huuu2')
+    # print(huu2)
+    winner = np.argwhere(huu2 == np.amax(huu2))
+    return np.random.choice(winner.flatten())
+    # # print(olh_estimates2)
+    # # print(np.argmax(olh_estimates2))
+    # # return np.argmax(olh_estimates2)
+    # winner = np.argwhere(olh_estimates2 == np.amax(olh_estimates2))
+    # return np.random.choice(winner.flatten())
+# print(train_df.columns)
+# encode and perturb data
+perturbed_df_hash = pd.DataFrame()
+perturbed_df_hash0 = pd.DataFrame()
+perturbed_df = pd.DataFrame()
+list_estimates = [[]]
+list_aggregates = [[]]
+for x in train_df.columns:
+    if x == 'income':
+        perturbed_df[x] = train_df.loc[:, x]
+        perturbed_df_hash[x] = train_df.loc[:, x]
+        perturbed_df_hash0[x] = train_df.loc[:, x]
+    else:
+        epsilon = 0.1
+        d = max(train_df[x]) + 1
+        # print(d)
+        olh_estimates = []
+        server_olh.update_params(epsilon, d)
+        client_olh.update_params(epsilon, d)
+        server_olh2.update_params(epsilon, d)
+        olh_estimates2 = np.array([0])
+        for i in range(0, d):
+            olh_estimates2 = np.append(olh_estimates2,0)
+        # print('ol')
+        # print(olh_estimates2)
+        tempColumn = train_df.loc[:, x].apply(lambda item: hash_perturb(item+1))
+        perturbed_df_hash[x] = tempColumn
+        tempColumn = perturbed_df_hash.loc[:, x].apply(lambda item: hash_perturb_get0(item))
+        perturbed_df_hash0[x] = tempColumn
+        tempColumn = perturbed_df_hash.loc[:,x].apply(lambda item: recategorize(item, epsilon, d))
+        perturbed_df[x] = tempColumn
+        # print('where')
+        # print(server_olh.aggregated_data)
+        list_aggregates.append(server_olh.aggregated_data)
+        for i in range(0, d):
+            olh_estimates.append(round(server_olh.estimate(i+1)))
+        list_estimates.append(olh_estimates)
+
+print('perturbed_df')
+print(perturbed_df_hash)
+print(perturbed_df)
+print(perturbed_df_hash0)
+print('list_estimates')
+print(list_estimates)
+# print('list_aggregates')
+# print(list_aggregates)
+print('compare aggregates with estimates')
+print(perturbed_df.age.value_counts())
+print(list_estimates[1])
+print(perturbed_df.workclass.value_counts())
+print(list_estimates[2])
+print(perturbed_df.native_country.value_counts())
+print(list_estimates[14])
+dist_age = scipy.spatial.distance.hamming(train_df.age,perturbed_df.age)
+dist_age2 = scipy.spatial.distance.hamming(train_df.age,train_df.age)
+print('dist')
+print(dist_age)
+print(dist_age2)
+T2 = perturbed_df.iloc[:, 0:-1]
+Y2 = perturbed_df.iloc[:, -1:]
+print('df?')
+print(T2)
+print(Y2)
+
+one=0
+two=0
+three=0
+four=0
+five=0
+for i in range(20):
+    X_train2, X_test2, y_train2, y_test2 = train_test_split(T2, Y2)
+    clfC = RandomForestClassifier()
+    clfC.fit(X_train2, y_train2)
+    predict1C = clfC.predict(X_test2)
+    print('predict')
+    print(predict1C)
+    conf = confusion_matrix(y_test2, predict1C)
+    print(conf)
+    print("Accuracy on perturbed:", metrics.accuracy_score(y_test2, predict1C))
+    three += metrics.accuracy_score(y_test2, predict1C)
+    clfC = RandomForestClassifier()
+    clfC.fit(X_train2, y_train2)
+    predict1C = clfC.predict(X_test1)
+    print('predict')
+    print(predict1C)
+    conf = confusion_matrix(y_test1, predict1C)
+    print(conf)
+    print("Accuracy on unperturbed:", metrics.accuracy_score(y_test1, predict1C))
+    four += metrics.accuracy_score(y_test1, predict1C)
+    clfC = RandomForestClassifier()
+    clfC.fit(X_train2, y_train2)
+    predict1C = clfC.predict(T)
+    print('predict')
+    print(predict1C)
+    conf = confusion_matrix(Y, predict1C)
+    print(conf)
+    print("Accuracy on original data:", metrics.accuracy_score(Y, predict1C))
+    five += metrics.accuracy_score(Y, predict1C)
+print(three/20)
+print(four/20)
+print(five/20)
+# print('scores')
+# print(scores)
+# print(scores.mean())
+# import math
+# import random
+# import csv
+# from statistics import mode
+#
+# import numpy as np
+# import pandas as pd
+#
+# from pure_ldp.frequency_oracles import LHClient, LHServer
+#
+#
+# def B(x):
+#     if x == 0 or x == 1:
+#         return 0
+#     else:
+#         return -(x * math.log2(x) + (1-x) * math.log2(1-x))
+#
+#
+# print(B(1/4) * 0.4 + B(1/2) * 0.2 + B(3/4) * 0.4)
+#
+# def initialise(data, columns, encoding='utf-8'):
+#     column_names = []
+#     with open(columns, encoding=encoding) as names:
+#         read = csv.reader(names)
+#         for a in read:
+#             column_names.extend(a)
+#     features = column_names[0:-1]
+#     label = column_names[-1]
+#     with open(data, encoding=encoding) as d:
+#         dataset = pd.read_csv(d, delimiter='[ \t]', header=None, names=column_names)
+#     return dataset, features, label
+#
+#
+# a, b, c = initialise('/home/sam/Downloads/skin.txt', '/home/sam/Downloads/s', 'us-ascii')
+#
+# nu = a.to_numpy()
+# # Parameters for experiment
+# epsilon = 5
+# d = 256
+# is_the = True
+# is_oue = True
+# is_olh = True
+#
+# # Optimal Local Hashing (OLH)
+# client_olh = LHClient(epsilon=epsilon, d=d, use_olh=True)
+# server_olh = LHServer(epsilon=epsilon, d=d, use_olh=True)
+#
+# print(nu[0][0])
+# f = []
+# f2=[]
+# # for item in nu.T[0]:
+# # #for _ in range(1000):
+# #     priv_olh_data = client_olh.privatise(item)
+# #     server_olh.aggregate(priv_olh_data)
+# #     f.append(priv_olh_data[0])
+# for _ in range(100):
+#     priv_olh_data = client_olh.privatise(1)
+#     # print(priv_olh_data)
+#     server_olh.aggregate(priv_olh_data)
+#     f.append(priv_olh_data[0])
+#
+# print('f')
+# print(f)
+# g =[]
+# for _ in range(15):
+#     g.append(f.count(_))
+# x = []
+# print('max')
+# print(mode(f))
+# print('index of highest value of this thing is most likely original value')
+# print(server_olh.aggregated_data)
+# print(np.argmax(server_olh.aggregated_data))
+# winner = np.argwhere(server_olh.aggregated_data == np.amax(server_olh.aggregated_data))
+# print(np.random.choice(winner.flatten()))
+# print(len(server_olh.aggregated_data))
+#
+# olh_estimates = []
+# for i in range(0, d):
+#     olh_estimates.append(round(server_olh.estimate(i)))
+#
+# print(olh_estimates)
+# print(np.argmax(olh_estimates))
