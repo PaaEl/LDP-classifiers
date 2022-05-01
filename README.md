@@ -1,3 +1,10 @@
+Below is an example of how to use the TestSuite.
+
+1. Import all the required classifiers
+2. Instantiate the required classifiers in the 'classifiers' array. Make sure all the required parameters are also included.
+3. Call 'testRun' with the database names you wish to run your test on.
+4. If other values for epsilon are required, change these in the 'set_params' call on the testSuite.
+
 ```
 from Daan.LDPLogReg import LDPLogReg
 from Daan.LDPNaiveBayes import LDPNaiveBayes
