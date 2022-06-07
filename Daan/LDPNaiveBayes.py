@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from LDPMechanism import LDPFreqMechanism
+from Daan.LDPMechanism import LDPFreqMechanism
 from sklearn.base import BaseEstimator
 from scipy.sparse import issparse
 from sklearn.metrics import accuracy_score 
@@ -15,6 +15,19 @@ class LDPNaiveBayes(BaseEstimator):
         return "Naive Bayes Classifier_" + self.LDPid
 
     def fit(self, X, y):
+        """The implementation of the fitting function.
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            The training input samples.
+        y : array-like, shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
         if issparse(X):
             raise ValueError(
                 "Not supporting sparse data."
@@ -28,17 +41,29 @@ class LDPNaiveBayes(BaseEstimator):
         self._featureProbabilities = []
         self._LDPMechanism = LDPFreqMechanism(self.LDPid)
         self._uniqueClassValues = max(np.unique(y))
-        self._n_features = len(X.T)
+        self._n_features = X.shape[1]
         self._perturb(X, y)
         self._calculateClassProbabilities(y)
         self._calculateFeatureProbabilities(X)
         return self
-    """
-    Connect the value of the classification to each feature value using:
-    featureValue * k + v
-    where k is the size of the classification domain and v is the actual classification value
-    """
+
     def _encodeFeatures(self, X, y):
+        """ Connect the value of the classification to each feature value using:
+        featureValue * k + v
+        where k is the size of the classification domain and v is the actual classification value
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            The training input samples.
+        y : array-like, shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        Returns
+        -------
+        encoded_features : array-like
+                           enoding of all features
+        """
         self._k = self._uniqueClassValues+1
 
         result = pd.DataFrame()
@@ -50,21 +75,40 @@ class LDPNaiveBayes(BaseEstimator):
             result[n_feature] = dataColumn * self._k + y
         
         return result.astype(int)
-    """ 
-    Perturb the data using the pure-LDP module.
-    The result is a list of server-objects for each feature colum that can be used to produce frequency estimates
-    """
+    
     def _perturb(self, X, y):
+        """ 
+        Perturb the data using the pure-LDP module.
+        The result is a list of server-objects for each feature colum that can be used to produce frequency estimates
+
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            The training input samples.
+        y : array-like, shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        Returns
+        -------
+        None
+            
+        """
         # Perturb features first
         servers = []
         encodedFeatures = self._encodeFeatures(X, y)
         for n_feature in range(self._n_features):
             d = int(max(encodedFeatures[n_feature].unique()))+1
 
-            LDPClient = self._LDPMechanism.client()
-            LDPClient.update_params(self.epsilon, d)
-            LDPServer = self._LDPMechanism.server()
-            LDPServer.update_params(self.epsilon, d)
+            params = {"epsilon":self.epsilon, "d":d}
+            LDPServer = self._LDPMechanism.server(params)
+
+            # TEMP so change entire if statement!!!!
+            hashMechanisms = ['HR', 'RAPPOR']
+            if self._LDPMechanism.LDPid in hashMechanisms:             
+                LDPClient = self._LDPMechanism.client(params, LDPServer)
+            else:
+                LDPClient = self._LDPMechanism.client(params)
+            # TEMP so change entire if statement!!!!
 
             # Privatise all the items in the current feature column
             tempColumn = encodedFeatures[n_feature].apply(lambda item : LDPClient.privatise(item+1))
@@ -74,28 +118,49 @@ class LDPNaiveBayes(BaseEstimator):
         self._featureLDPServers = servers
 
         # Perturb classification values
-        LDPClient = self._LDPMechanism.client()
-        LDPClient.update_params(self.epsilon, d)
-        LDPServer = self._LDPMechanism.server()
-        LDPServer.update_params(self.epsilon, d)
+        params = {"epsilon":self.epsilon, "d":d}
+        LDPServer = self._LDPMechanism.server(params)
+
+        # TEMP so change entire if statement!!!!
+        if self._LDPMechanism.LDPid in hashMechanisms:             
+            LDPClient = self._LDPMechanism.client(params, LDPServer)
+        else:
+            LDPClient = self._LDPMechanism.client(params)
+        # TEMP so change entire if statement!!!!
+        
         for row in y:
             privateData = LDPClient.privatise(row+1)
             LDPServer.aggregate(privateData)
         self._classLDPServer = LDPServer
 
-    """
-    Calculate the probabilites per class
-    """
     def _calculateClassProbabilities(self, y):
+        """
+        Calculate the probabilites per class
+        Parameters
+        ----------
+        y : array-like, shape (n_samples,) or (n_samples, n_outputs)
+            The target values (class labels in classification, real numbers in
+            regression).
+        Returns
+        -------
+        None
+        """
         classificationSize = len(y)
-        estimates = [self._classLDPServer.estimate(i+1) for i in range(self._k)]
+        estimates = [self._classLDPServer.estimate(i+1, suppress_warnings=True) for i in range(self._k)]
         estimates = [1 if estimate <= 0 else estimate for estimate in estimates]
         self._classProbabilities = [estimates[i] / classificationSize for i in range(self._k)]
 
-    """
-    Calculate the probabilities for each encoded feature
-    """
     def _calculateFeatureProbabilities(self, X):
+        """
+        Calculate the probabilities for each encoded feature
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            The training input samples.
+        Returns
+        -------
+        None
+        """
         # Go over every class value in it's domain
         for classValue in range(self._k):
             tempProbabilities = []
@@ -107,7 +172,7 @@ class LDPNaiveBayes(BaseEstimator):
                 for i in range(d):
                     featureIndex = i * self._k + classValue
                     try:
-                        estimate = round(self._featureLDPServers[index].estimate(featureIndex+1))
+                        estimate = round(self._featureLDPServers[index].estimate(featureIndex+1, suppress_warnings=True))
                     except IndexError:
                         estimate = 1
                     freq = 1 if estimate <= 0 else estimate
@@ -116,10 +181,18 @@ class LDPNaiveBayes(BaseEstimator):
                 tempProbabilities.append([estimates[i] / sumEstimates for i in range(d)])
             self._featureProbabilities.append(tempProbabilities)
 
-    """
-    Predict the classification based on the test set.
-    """
     def predict(self, X):
+        """
+        Predict the classification based on the test set.
+        Parameters
+        ----------
+        X : {array-like, sparse matrix}, shape (n_samples, n_features)
+            The training input samples.
+        Returns
+        -------
+        predictions : array-like
+                      predictions
+        """
         X = check_array(X)
         results = []
         for row in range(X.shape[0]):
@@ -135,7 +208,3 @@ class LDPNaiveBayes(BaseEstimator):
                 prediction.append(classProb * featureProb)
             results.append(prediction.index(max(prediction)))
         return results
-
-    def score(self, X, y):
-        prediction = self.predict(X)
-        return accuracy_score(prediction, y)
