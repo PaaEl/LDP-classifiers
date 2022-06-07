@@ -22,9 +22,9 @@ class DataPreprocessor:
         """
         self.X, self.y = self._get_raw_data(database_name)
         self._label_encode()
+        self._bin_encode(10)
         if onehotencoded:
             self._one_hot_encode()
-        self._bin_encode(10)
         self._clean_up()
         return self.X, self.y
 
@@ -100,10 +100,12 @@ class DataPreprocessor:
         None
         """
         encoder = OneHotEncoder()
-        encoder.fit(pd.DataFrame(self.X.loc[:, self.categorical_features]))
+        # encoder.fit(pd.DataFrame(self.X.loc[:, self.categorical_features]))
+        encoder.fit(pd.DataFrame(self.X))
         columnNames = encoder.get_feature_names_out()
-        tempXdata = pd.DataFrame(encoder.transform(pd.DataFrame(self.X.loc[:, self.categorical_features])).toarray(), columns=columnNames)
-        self.X = self.X.drop(self.categorical_features, axis=1)
+        # tempXdata = pd.DataFrame(encoder.transform(pd.DataFrame(self.X.loc[:, self.categorical_features])).toarray(), columns=columnNames)
+        tempXdata = pd.DataFrame(encoder.transform(pd.DataFrame(self.X)).toarray(), columns=columnNames)
+        self.X = self.X.drop(self.categorical_features + self.continuous_features, axis=1)
         self.X.loc[:,columnNames] = tempXdata
 
     def _bin_encode(self, n):
@@ -121,7 +123,8 @@ class DataPreprocessor:
             encoder = KBinsDiscretizer(n_bins=n, encode="ordinal", strategy='uniform')
             self.X.loc[:,self.continuous_features] = encoder.fit_transform(self.X.loc[:, self.continuous_features])
 
-    """ Clean the data by resetting index and randomizing the order
+    def _clean_up(self):
+        """ Clean the data by resetting index and randomizing the order
 
         Parameters
         ----------
@@ -131,6 +134,5 @@ class DataPreprocessor:
         -------
         None
         """
-    def _clean_up(self):
         self.X, _, self.y, _ = train_test_split(self.X, self.y, random_state=32)
         self.X = self.X.reset_index(drop=True)
