@@ -59,7 +59,7 @@ class TestSuite():
             for classifier in self.classifiers:
                 classifierDataFrame = pd.DataFrame()
                 for epsilon_value in self.epsilon_values:
-                    # classifier.set_params(epsilon=epsilon_value)
+                    classifier.set_params(epsilon=epsilon_value)
                     scores = cross_validate(classifier, X, y, scoring=['accuracy', 'balanced_accuracy','f1_macro', 'precision_macro', 'recall_macro'])
                     scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
                     scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
