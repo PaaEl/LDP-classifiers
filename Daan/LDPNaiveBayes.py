@@ -68,11 +68,15 @@ class LDPNaiveBayes(BaseEstimator):
 
         result = pd.DataFrame()
 
+        # temp = X.T * self._k + y
+        # result = pd.DataFrame(temp)
         for n_feature in range(self._n_features):
             dataColumn = X.T[n_feature]
             # encodedColumn = dataColumn * self._k + y
             # result = pd.concat([result, pd.DataFrame(encodedColumn, columns=[n_feature])],axis=1)
-            result[n_feature] = dataColumn * self._k + y
+
+            tempData = dataColumn * self._k + y
+            result[n_feature] = tempData
         
         return result.astype(int)
     
