@@ -82,22 +82,6 @@ class LDPLogReg(BaseEstimator):
             localPredictions[index] = self._predictSingle(X, weightColumn)
         return localPredictions.apply(lambda x : list(x).index(max(x)), axis=1)
 
-    def score(self, X, y):
-        """ Default scoring function
-        Parameters
-        ----------
-        X : {array-like, sparse matrix}, shape (n_samples, n_features)
-            The training input samples.
-        y : array-like, shape (n_samples) or (n_samples, n_outputs)
-            The target values 
-        Returns
-        -------
-        score : float
-                Accuracy score
-        """
-        prediction = self.predict(X)
-        return accuracy_score(prediction, y)
-
     def _fit_single(self, X, y):
         """ Fit a classifier on a single row of classification values
         Parameters

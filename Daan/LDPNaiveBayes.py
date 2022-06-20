@@ -47,7 +47,7 @@ class LDPNaiveBayes(BaseEstimator):
         self._calculateFeatureProbabilities(X)
         return self
 
-    def _encodeFeatures(self, X, y):
+    def _connectFeaturesWithClass(self, X, y):
         """ Connect the value of the classification to each feature value using:
         featureValue * k + v
         where k is the size of the classification domain and v is the actual classification value
@@ -61,13 +61,13 @@ class LDPNaiveBayes(BaseEstimator):
             regression).
         Returns
         -------
-        encoded_features : array-like
-                           enoding of all features
+        connected_features : array-like
+                             connection of all features
         """
         self._k = self._uniqueClassValues+1
 
-        encodedTemp = X.T * self._k + y
-        result = pd.DataFrame(encodedTemp.T)
+        connectedTemp = X.T * self._k + y
+        result = pd.DataFrame(connectedTemp.T)
         
         return result.astype(int)
     
@@ -90,7 +90,7 @@ class LDPNaiveBayes(BaseEstimator):
         """
         # Perturb features first
         servers = []
-        encodedFeatures = self._encodeFeatures(X, y)
+        encodedFeatures = self._connectFeaturesWithClass(X, y)
         for n_feature in range(self._n_features):
             d = int(max(encodedFeatures[n_feature].unique()))+1
 
