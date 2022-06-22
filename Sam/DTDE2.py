@@ -51,18 +51,24 @@ def perturb(df, e):
         perturbed_df[x] = tempColumn
     return perturbed_df
 
-def estimate(df, e):
+def estimate(df, e, do):
     lis =[]
+    i = 0
+    print(df.columns)
+    print(do)
     for x in df.columns:
         epsilon = e
-        d = max(df[x]) + 1
-        server_olh.update_params(epsilon, d)
-        client_olh.update_params(epsilon, d)
+        # d = max(df[x]) + 1
+        print('doi')
+        print(do[i])
+        server_olh.update_params(epsilon, do[i])
+        client_olh.update_params(epsilon, do[i])
         df.loc[:, x].apply(lambda g: server_olh.aggregate(g))
         li = []
-        for i in range(0, d):
-            li.append(round(server_olh.estimate(i + 1)))
+        for j in range(0, do[i]):
+            li.append(round(server_olh.estimate(j + 1)))
         lis.append(li)
+        i +=1
     return lis
 
 def not_neg(lis):
@@ -93,14 +99,17 @@ def gain(lis, c):
     b = sum(lis)
     # print(b)
     i =1
+    j=0
     while i < len(lis):
-        # print('i')
-        # print(i)
+        print('i')
+        print(i)
+        print(lis)
+        print(c)
         bb = sum(lis [i-1:i+c-1])
         # print(bb)
         fraction.append(bb/b)
-        j = i -1
         while j < (i+ c-1):
+            print(j)
             bbb = lis[j]/bb
             prob.append(bbb)
             j+=1
@@ -134,14 +143,20 @@ for x in database_names:
     b = DataPreprocessor.DataPreprocessor()
     X, y = b.get_data(x)
     X = X.astype('int')
+    do = []
+    for x in X.columns:
+        do.append(max(X[x]) + 1)
     X.insert(len(X.columns),'label',y)
+    c = max(y) + 1
+    do = [gg * c for gg in do]
+    print(do)
     # ffg = X.iloc[:, 0].value_counts()
     # print(ffg)
     # gdsd = X.loc[X.iloc[:, 0] == 3]
     # print(gdsd)
     # gdsda = gdsd.loc[X.iloc[:, -1] == 1]
     # print(gdsda)
-    c = max(y) + 1
+
     imp =[]
     for i in range(c):
         imp.append(np.count_nonzero(y == i))
@@ -173,7 +188,9 @@ for x in database_names:
         v = perturb(j.iloc[: , :-1], epsilon_value)
         print('v')
         print(v)
-        w = estimate(v, epsilon_value)
+        print(v.iloc[: , 0:1].value_counts())
+        print(j.iloc[:, 0:1].value_counts())
+        w = estimate(v, epsilon_value, do)
         print(w)
         n = not_neg(w)
         print(n)
