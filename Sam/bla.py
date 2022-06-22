@@ -1,31 +1,21 @@
 import math
 from datetime import date
 
-import pandas
-from sklearn.metrics import confusion_matrix
-import c45
-from sklearn import metrics
-import numpy as np
-from sklearn import tree
+from sklearn.datasets import load_iris
+from tree import Tree
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
-
+import numpy as np
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
 import DataPreprocessor
 
-database_names=['mushroom','car','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,1,5]
+database_names=['spect','weightliftingexercises','htru']
+epsilon_values=[5]
 depth = 10
-
 
 def hash_perturb(io):
     g = client_olh.privatise(io)
     return g
-
-# def gain(df, lis):
-
-    # return ranked
-
 def encode(df, c):
     perturbed_df = pd.DataFrame()
     for x in df.columns:
@@ -54,13 +44,13 @@ def perturb(df, e):
 def estimate(df, e, do):
     lis =[]
     i = 0
-    print(df.columns)
-    print(do)
+    # print(df.columns)
+    # print(do)
     for x in df.columns:
         epsilon = e
         # d = max(df[x]) + 1
-        print('doi')
-        print(do[i])
+        # print('doi')
+        # print(do[i])
         server_olh.update_params(epsilon, do[i])
         client_olh.update_params(epsilon, do[i])
         df.loc[:, x].apply(lambda g: server_olh.aggregate(g))
@@ -72,7 +62,7 @@ def estimate(df, e, do):
     return lis
 
 def not_neg(lis):
-    t = [[abs(j) for j in y] for y in lis]
+    t = [[j if j >0 else 0 for j in y] for y in lis]
     return t
 
 def rank(df, lis,  c):
@@ -101,16 +91,19 @@ def gain(lis, c):
     i =1
     j=0
     while i < len(lis):
-        print('i')
-        print(i)
-        print(lis)
-        print(c)
+        # print('i')
+        # print(i)
+        # print(lis)
+        # print(c)
         bb = sum(lis [i-1:i+c-1])
         # print(bb)
         fraction.append(bb/b)
         while j < (i+ c-1):
-            print(j)
-            bbb = lis[j]/bb
+            # print(j)
+            if bb == 0:
+                bbb = 0
+            else:
+                bbb = lis[j]/bb
             prob.append(bbb)
             j+=1
         i +=c
@@ -138,76 +131,51 @@ def gain(lis, c):
     # print(enj)
     return 1 + enj
 
+# iris = load_iris()
+# # print(iris)
+# clf = Tree(attrNames=iris.feature_names)
+# X_train, X_test, y_train, y_test = train_test_split(iris.data, iris.target, test_size=0.5)
+# clf.fit(X_train, y_train)
 
 for x in database_names:
     b = DataPreprocessor.DataPreprocessor()
     X, y = b.get_data(x)
     X = X.astype('int')
+    feat = list(X.columns)
+    # print(feat)
+    # print('uni')
+    # print(X['buying'].value_counts())
     do = []
     for x in X.columns:
         do.append(max(X[x]) + 1)
     X.insert(len(X.columns),'label',y)
     c = max(y) + 1
     do = [gg * c for gg in do]
+    print('do')
     print(do)
-    # ffg = X.iloc[:, 0].value_counts()
-    # print(ffg)
-    # gdsd = X.loc[X.iloc[:, 0] == 3]
-    # print(gdsd)
-    # gdsda = gdsd.loc[X.iloc[:, -1] == 1]
-    # print(gdsda)
-
-    imp =[]
-    for i in range(c):
-        imp.append(np.count_nonzero(y == i))
-        print(imp)
-    print('c')
-    print(c)
-    print(X)
-    print(X.iloc[: , :-1])
     epsilon = 10
     d = 10
     client_olh = DEClient(epsilon=epsilon, d=d)
     server_olh = DEServer(epsilon=epsilon, d=d)
     server_olh2 = DEServer(epsilon=epsilon, d=d)
-    olh_estimates2 = np.array([0])
-    clfC = c45.C45()
-    scores = cross_validate(clfC, X.iloc[: , :-1], y,
-                            scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
-                                     'recall_macro'])
-    scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
-    scoresDataFrame.drop(labels=['fit_time'], inplace=True)
-    rowName = 'dtde' + '/' + x + '/'
-    scoresDataFrame = scoresDataFrame.add_prefix(rowName)
-    scoresDataFrame.to_csv("./Experiments/test_run_" +
-                           date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
-
-    classifierDataFrame = pd.DataFrame()
     for epsilon_value in epsilon_values:
-        j = encode(X,c)
-        v = perturb(j.iloc[: , :-1], epsilon_value)
-        print('v')
-        print(v)
-        print(v.iloc[: , 0:1].value_counts())
-        print(j.iloc[:, 0:1].value_counts())
+        j = encode(X, c)
+        v = perturb(j.iloc[:, :-1], epsilon_value)
         w = estimate(v, epsilon_value, do)
+        print('w')
         print(w)
-        n = not_neg(w)
-        print(n)
-        run = rank(v, n, c)
-        print(run)
-        clfC = c45.C45()
-        scores = cross_validate(clfC, v, y,
-                                scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
-                                         'recall_macro'])
-        scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
-        scoresDataFrame.drop(labels=['fit_time'], inplace=True)
-        rowName = 'dtde' + '/' + x + '/'
-        scoresDataFrame = scoresDataFrame.add_prefix(rowName)
-        classifierDataFrame[epsilon_value] = scoresDataFrame
-    classifierDataFrame.to_csv("./Experiments/test_run_" +
-                               date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
-
-
-
-
+        clf = Tree(attrNames=feat, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
+                   ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
+                   domainSize=do, max=c)
+        # scores = cross_validate(clf, X.iloc[:, :-1], y,
+        #                         scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
+        #                                  'recall_macro'])
+        # scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
+        # scoresDataFrame.drop(labels=['fit_time'], inplace=True)
+        # rowName = 'dtde' + '/' + x + '/'
+        # scoresDataFrame = scoresDataFrame.add_prefix(rowName)
+        # scoresDataFrame.to_csv("./Experiments/test_run_" +
+        #                        date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
+        X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.3)
+        clf.fit(X_train, y_train)
+        # print(f'Accuracy: {clf.score(X_test, y_test)}')
