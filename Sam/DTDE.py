@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, cross_val
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
 import DataPreprocessor
 
-database_names=['adult','mushroom','iris','vote','car','nursery']
+database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
 
 
@@ -75,7 +75,7 @@ for x in database_names:
     server_olh = DEServer(epsilon=epsilon, d=d)
     server_olh2 = DEServer(epsilon=epsilon, d=d)
     olh_estimates2 = np.array([0])
-    clfC = c45.C45()
+    clfC = tree.DecisionTreeClassifier()
     scores = cross_validate(clfC, X, y,
                             scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
                                      'recall_macro'])
@@ -89,7 +89,7 @@ for x in database_names:
     classifierDataFrame = pd.DataFrame()
     for epsilon_value in epsilon_values:
         v = perturb(X, epsilon_value)
-        clfC = c45.C45()
+        clfC = tree.DecisionTreeClassifier()
         scores = cross_validate(clfC, v, y,
                                 scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
                                          'recall_macro'])

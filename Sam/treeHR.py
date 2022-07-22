@@ -20,15 +20,19 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
+        # print(self.ldpServer.get_hash_funcs)
 
     def estimate(self,df, e, do):
         lis = []
         i = 0
-        print(df)
+        # print(df)
         for x in df.columns:
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
+            # print('hash')
+            # print(self.ldpServer.get_hash_funcs())
+            hf = self.ldpServer.get_hash_funcs()
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs= hf)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -93,10 +97,11 @@ class Tree(BaseEstimator,ClassifierMixin):
         return 1 + enj
 
     def create_node(feature, value, parent, count, le):
-        print('lis')
-        print(feature)
-        print(count)
-        print(le)
+        # print('lis')
+        # print(feature)
+        #
+        # print(count)
+        # print(le)
         return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
@@ -136,6 +141,9 @@ class Tree(BaseEstimator,ClassifierMixin):
                 # print('i')
                 # print(i)
                 lis = sel3[i-1:i+self.max-1]
+                # print('lis')
+                # print(lis)
+                # print(le)
                 self.nodes[sel + '#'+ str(j)] = Tree.create_node(sel, j, parent, lis, le)
                 # print(self.nodes)
                 Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1, sel7, sel5, sel6, le)
@@ -173,8 +181,8 @@ class Tree(BaseEstimator,ClassifierMixin):
         return io[0]
 
     def fit(self, X, y):
-        print('X')
-        print(X)
+        # print('X')
+        # print(X)
         X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
@@ -183,9 +191,9 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        print('ass')
-        print(self.attrNames)
-        print(self.X_[0])
+        # print('ass')
+        # print(self.attrNames)
+        # print(self.X_[0])
         assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
@@ -219,7 +227,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             return None
         else:
             # print(obs)
-            # print(root.children[0])
+            # print(root.children)
             feat = root.children[0].name.split('#')[0]
             # print(feat)
             feat_ind = attrs_names.index(feat)
@@ -232,8 +240,6 @@ class Tree(BaseEstimator,ClassifierMixin):
             Tree.decision(path, obs, attrs_names, lis)
             return lis
 
-
-
     def predict(self, X):
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
@@ -241,7 +247,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(type(X))
         prediction = []
         for i in range(len(X)):
-            answer = Tree.decision(self.root,X[i],self.attrNames, [])
+            answer = Tree.decision(self.root, X[i], self.attrNames, [])
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]

@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split, cross_val_score, cross_val
 
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
 import DataPreprocessor
-database_names=['adult','mushroom','iris','vote','car','nursery']
+database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
 
 
@@ -93,6 +93,7 @@ for x in database_names:
         scores = cross_validate(clfC, v, y,
                                 scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
                                          'recall_macro'])
+        print(scores)
         scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
         scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
         rowName = 'rf' + '/' + x + '/'

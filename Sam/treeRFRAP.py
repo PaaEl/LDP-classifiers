@@ -5,6 +5,8 @@ from anytree import Node, RenderTree
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
+from pure_ldp.frequency_oracles.rappor import rappor_client
+
 
 class Tree(BaseEstimator,ClassifierMixin):
     def __init__(self, attrNames=None, depth=10, ldpMechanismClient=None, ldpMechanismServer=None,
@@ -24,11 +26,18 @@ class Tree(BaseEstimator,ClassifierMixin):
     def estimate(self,df, e, do):
         lis = []
         i = 0
-        print(df)
+        # print('do')
+        # print(do)
+        # print(df)
+        # print(df.iloc[1,1])
         for x in df.columns:
             epsilon = e
+            f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
             self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs())
+            # df.loc[:, x].apply(lambda g: g.astype(int))
+            # print(x)
+            # df.loc[:, x].apply(lambda g: print(g))
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -93,10 +102,10 @@ class Tree(BaseEstimator,ClassifierMixin):
         return 1 + enj
 
     def create_node(feature, value, parent, count, le):
-        print('lis')
-        print(feature)
-        print(count)
-        print(le)
+        # print('lis')
+        # print(feature)
+        # print(count)
+        # print(le)
         return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
@@ -175,26 +184,30 @@ class Tree(BaseEstimator,ClassifierMixin):
     def fit(self, X, y):
         print('X')
         print(X)
-        X, y = check_X_y(X, y)
+        print(X.iloc[1,1])
+        # X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
         self.X_df_ = pd.DataFrame(X)
+        print(self.X_df_.iloc[1, 1])
         self.y_ = y
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        print('ass')
-        print(self.attrNames)
-        print(self.X_[0])
-        assert (len(self.attrNames) == len(self.X_[0]))
+        # print('ass')
+        # print(self.attrNames)
+        # print(self.X_[0])
+        # assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
         categories = []
 
         for i in range(len(self.X_)):
             categories.append(str(self.y_[i]))
-            for j in range(len(self.attrNames)):
-                data[j].append(self.X_[i][j])
+            # for j in range(len(self.attrNames)):
+            #     data[j].append(self.X_[i][j])
+        print('cate')
+        print(categories)
         w = Tree.estimate(self, self.X_df_, self.epsilon_value, self.domainSize)
         # print('w')
         # print(w)

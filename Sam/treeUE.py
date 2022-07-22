@@ -24,11 +24,17 @@ class Tree(BaseEstimator,ClassifierMixin):
     def estimate(self,df, e, do):
         lis = []
         i = 0
+        print('do')
+        print(do)
         print(df)
+        print(df.iloc[1,1])
         for x in df.columns:
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
             self.ldpClient.update_params(epsilon, do[i])
+            # df.loc[:, x].apply(lambda g: g.astype(int))
+            print(x)
+            # df.loc[:, x].apply(lambda g: print(g))
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -175,26 +181,28 @@ class Tree(BaseEstimator,ClassifierMixin):
     def fit(self, X, y):
         print('X')
         print(X)
-        X, y = check_X_y(X, y)
+        print(X.iloc[1,1])
+        # X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
         self.X_df_ = pd.DataFrame(X)
+        print(self.X_df_.iloc[1, 1])
         self.y_ = y
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        print('ass')
-        print(self.attrNames)
-        print(self.X_[0])
-        assert (len(self.attrNames) == len(self.X_[0]))
+        # print('ass')
+        # print(self.attrNames)
+        # print(self.X_[0])
+        # assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
         categories = []
 
         for i in range(len(self.X_)):
             categories.append(str(self.y_[i]))
-            for j in range(len(self.attrNames)):
-                data[j].append(self.X_[i][j])
+            # for j in range(len(self.attrNames)):
+            #     data[j].append(self.X_[i][j])
         w = Tree.estimate(self, self.X_df_, self.epsilon_value, self.domainSize)
         # print('w')
         # print(w)
