@@ -28,7 +28,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         for x in df.columns:
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
+            self.ldpClient.update_params(epsilon, do[i],self.ldpServer.get_hash_funcs())
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -179,9 +179,9 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        print('ass')
-        print(self.attrNames)
-        print(self.X_[0])
+        # print('ass')
+        # print(self.attrNames)
+        # print(self.X_[0])
         assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
@@ -215,7 +215,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             return None
         else:
             # print(obs)
-            # print(root.children[0])
+            # print(root.children)
             feat = root.children[0].name.split('#')[0]
             # print(feat)
             feat_ind = attrs_names.index(feat)
@@ -233,6 +233,7 @@ class Tree(BaseEstimator,ClassifierMixin):
     def predict(self, X):
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
+        # print('pred')
         # print(X)
         # print(type(X))
         prediction = []
