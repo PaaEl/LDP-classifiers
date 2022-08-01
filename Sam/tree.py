@@ -20,7 +20,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
-
+    '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
     def estimate(self,df, e, do):
         lis = []
         i = 0
@@ -36,11 +36,11 @@ class Tree(BaseEstimator,ClassifierMixin):
             lis.append(li)
             i += 1
         return lis
-
+    '''Negative counts set to 0'''
     def not_neg(lis):
         t = [[j if j > 0 else 0 for j in y] for y in lis]
         return t
-
+    '''Labels each feature with it's information gain'''
     def rank(df, lis, c):
         ran = []
         i = 0
@@ -54,13 +54,13 @@ class Tree(BaseEstimator,ClassifierMixin):
             ran.append(tu)
             i += 1
         return ran
-
+    '''Used for calculating information gain'''
     def entro(x):
         if x == 0:
             return 0
         else:
             return x * math.log2(x)
-
+    '''Calculates information gain'''
     def gain(lis, c):
         fraction = []
         prob = []
@@ -91,7 +91,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             enj += fraction[i - 1] * en
             i += 1
         return 1 + enj
-
+    '''Makes a node with feature name, value, parent and weight (count of feature value divided by total amount of records) '''
     def create_node(feature, value, parent, count, le):
         print('lis')
         print(feature)
@@ -100,6 +100,17 @@ class Tree(BaseEstimator,ClassifierMixin):
         return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
+        """
+
+        @param parent: parent node
+        @param attrs_names: feature names
+        @param depth: depth remaining
+        @param run: list of features and their info gain
+        @param do: list of feature domainsizes
+        @param amount: counts of feature values
+        @param le: amount of records in total
+        @return: tree
+        """
         # print('dep')
         # print(depth)
         if parent is None:
@@ -168,11 +179,16 @@ class Tree(BaseEstimator,ClassifierMixin):
                 i += self.max
             # print(self.nodes)
             return None
-
+    '''unused'''
     def hash_perturb_get0(io):
         return io[0]
-
+    ''''''
     def fit(self, X, y):
+        """
+        Fit data
+        @param X: data
+        @param y: labels
+        """
         print('X')
         print(X)
         X, y = check_X_y(X, y)
@@ -215,6 +231,13 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(categories)
 
     def decision(root, obs, attrs_names, lis):
+        """
+        Returns the predicted label for a record
+        @param obs: the record
+        @param attrs_names: feature names
+        @param lis: empty list
+        @return: list of weights along the path to the leaf corresponding to the record
+        """
         if not root.children:
             return None
         else:
@@ -235,6 +258,11 @@ class Tree(BaseEstimator,ClassifierMixin):
 
 
     def predict(self, X):
+        """
+        Predict the label for a record by adding the weights of all possible labels and selecting the max one
+        @param X: record
+        @return: label
+        """
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
         # print(X)

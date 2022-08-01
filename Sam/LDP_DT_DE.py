@@ -13,15 +13,19 @@ import DataPreprocessor
 
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = 6
+depth = 1
 
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
+
+'''From pure ldp, perturbs the data'''
 def hash_perturb(io):
     g = client_olh.privatise(io)
     return g
 
+'''Connects the feature value to the label value'''
 def encode(df, c):
     perturbed_df = pd.DataFrame()
+    print(df)
     y = df.iloc[: , -1]
     for x in df.columns:
         tempColumn = df.loc[:, x].apply(lambda item: item * c)
@@ -29,8 +33,9 @@ def encode(df, c):
         perturbed_df[x] = tempColumn
     g = perturbed_df.iloc[:, :-1]
     g.insert(len(g.columns),'label',y)
+    print(g)
     return g
-
+'''unused'''
 def decode(df, cat, c):
     df = pd.DataFrame(df)
     df.insert(len(df.columns),'label',cat)
@@ -41,7 +46,7 @@ def decode(df, cat, c):
         perturbed_df[x] = tempColumn
     return perturbed_df.iloc[:, :-1].astype('int')
 
-
+'''Perturbs using hash_perturb'''
 def perturb(df, e):
     perturbed_df = pd.DataFrame()
     for x in df.columns:
@@ -55,6 +60,7 @@ def perturb(df, e):
 
 
 for xx in database_names:
+    # getting the data in order
     b = DataPreprocessor.DataPreprocessor()
     X, y = b.get_data(xx)
     X = X.astype('int')
@@ -65,7 +71,9 @@ for xx in database_names:
         do.append(max(X[x]) + 1)
     X.insert(len(X.columns),'label',y)
     c = max(y) + 1
+    # gets domainsize for each feature
     do = [gg * c for gg in do]
+    # getting the LDP mechanism, parameters are reset when used
     epsilon = 10
     d = 10
     client_olh = DEClient(epsilon=epsilon, d=d)
@@ -81,18 +89,22 @@ for xx in database_names:
         f1 = []
         prec = []
         recall = []
+        # ten times and get the average
         for i in range(10):
             i+=1
             clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
                        ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
                        domainSize=do, max=c)
+            # train on connected data
             X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
+            # to test on data that hasn't been connected
             X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.2)
             # X_test = decode(X_test, y_test, c)
             clf.fit(X_train, y_train)
             start = ti.time()
             pre = clf.predict(X_test1)
             stop = ti.time()
+            # gathering the results
             balanced_accuracy.append(balanced_accuracy_score(y_test1, pre))
             accuracy.append(accuracy_score(y_test1, pre))
             f1.append(f1_score(y_test1, pre, average='weighted'))
