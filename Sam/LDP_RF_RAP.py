@@ -81,6 +81,8 @@ for xx in database_names:
     epsilon = 10
     d = 10
     f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
+    if f >= 1:
+        f = 0.99
     server_olh = RAPPORServer(f, 128, 8, d)
     client_olh = RAPPORClient(f, 128, server_olh.get_hash_funcs(), 8)
 

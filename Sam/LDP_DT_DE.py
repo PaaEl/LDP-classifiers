@@ -12,9 +12,10 @@ import numpy as np
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
 import DataPreprocessor
 
+
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = 4
+depth = 2
 # 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 

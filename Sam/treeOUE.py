@@ -26,7 +26,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         i = 0
         # print(df)
         for x in df.columns:
-            print(df.loc[:, x])
+            # print(df.loc[:, x])
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
             self.ldpClient.update_params(epsilon, do[i])

@@ -1,13 +1,11 @@
 import math
+import random
 
-import numpy as np
 import pandas as pd
 from anytree import Node, RenderTree
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
-from pure_ldp.frequency_oracles.rappor import rappor_client
-
 
 class Tree(BaseEstimator,ClassifierMixin):
     def __init__(self, attrNames=None, depth=10, ldpMechanismClient=None, ldpMechanismServer=None,
@@ -23,42 +21,30 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
+        # print(self.ldpServer.get_hash_funcs)
 
     def estimate(self,df, e, do):
         lis = []
         i = 0
-        # print('do')
-        # print(do)
         # print(df)
-        # print(df.iloc[1,1])
         for x in df.columns:
+            # print('lis')
             epsilon = e
-            f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
-            if f >= 1:
-                f = 0.99
-            # print('g')
-            # print(self.ldpServer.cohort_count)
-            # print(self.ldpServer.bloom_filters)
-
-            self.ldpServer.update_params(epsilon, do[i], f=f)
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs(), f=f)
-            self.ldpServer.estimated_data = np.zeros(do[i])
-            self.ldpServer.normalised_data = []
-            self.ldpServer.bloom_filters = [np.zeros(self.ldpServer.m) for i in range(0, self.ldpServer.num_of_cohorts)]
-            self.ldpServer.cohort_count = np.zeros(self.ldpServer.num_of_cohorts)
-            # print(self.ldpServer.estimated_data)
-            # df.loc[:, x].apply(lambda g: g.astype(int))
-            # print(x)
-            # df.loc[:, x].apply(lambda g: print(g))
+            self.ldpServer.update_params(epsilon, do[i])
+            # print('hash')
+            # print(self.ldpServer.get_hash_funcs())
+            hf = self.ldpServer.get_hash_funcs()
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs= hf)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
+            # print(self.ldpServer.aggregated_data)
+            # print(len(self.ldpServer.aggregated_data))
             li = []
             for j in range(0, do[i]):
                 li.append(round(self.ldpServer.estimate(j + 1)))
             lis.append(li)
-            # print('gg')
-            # print(self.ldpServer.estimated_data)
             # print(lis)
             i += 1
+        print(lis)
         return lis
 
     def not_neg(lis):
@@ -119,8 +105,10 @@ class Tree(BaseEstimator,ClassifierMixin):
     def create_node(feature, value, parent, count, le):
         # print('lis')
         # print(feature)
-        # print(count)
-        # print(le)
+        # # print(count)
+        # # print(le)
+        # dfd = [x * sum(count) / le for x in count]
+        # print(dfd)
         return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
@@ -160,6 +148,9 @@ class Tree(BaseEstimator,ClassifierMixin):
                 # print('i')
                 # print(i)
                 lis = sel3[i-1:i+self.max-1]
+                # print('lis')
+                # print(lis)
+                # print(le)
                 self.nodes[sel + '#'+ str(j)] = Tree.create_node(sel, j, parent, lis, le)
                 # print(self.nodes)
                 Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1, sel7, sel5, sel6, le)
@@ -199,31 +190,26 @@ class Tree(BaseEstimator,ClassifierMixin):
     def fit(self, X, y):
         # print('X')
         # print(X)
-        # print(X.iloc[1,1])
-        # X, y = check_X_y(X, y)
+        X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
         self.X_df_ = pd.DataFrame(X)
-        # print(self.X_df_.iloc[1, 1])
         self.y_ = y
-        # print(type(y[0]))
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
         # print('ass')
         # print(self.attrNames)
         # print(self.X_[0])
-        # assert (len(self.attrNames) == len(self.X_[0]))
+        assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
         categories = []
 
         for i in range(len(self.X_)):
             categories.append(str(self.y_[i]))
-            # for j in range(len(self.attrNames)):
-            #     data[j].append(self.X_[i][j])
-        # print('cate')
-        # print(categories)
+            for j in range(len(self.attrNames)):
+                data[j].append(self.X_[i][j])
         w = Tree.estimate(self, self.X_df_, self.epsilon_value, self.domainSize)
         # print('w')
         # print(w)
@@ -237,7 +223,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(run)
 
         self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth, run, self.domainSize, n, le)
-        # print(RenderTree(self.root))
+        print(RenderTree(self.root))
         # print(self.root.children)
         # print('data')
         # print(data)
@@ -247,7 +233,6 @@ class Tree(BaseEstimator,ClassifierMixin):
         if not root.children:
             return None
         else:
-            # print('obs')
             # print(obs)
             # print(root.children)
             feat = root.children[0].name.split('#')[0]
@@ -262,17 +247,44 @@ class Tree(BaseEstimator,ClassifierMixin):
             Tree.decision(path, obs, attrs_names, lis)
             return lis
 
-
+    def prob(self, x):
+        if sum(x) == 0:
+            for i in range(len(x)):
+                if random.random() < 1 / len(x):
+                    return i
+                    break
+                else:
+                    i += 1
+            return i - 1
+        else:
+            probs = [j / sum(x) for j in x]
+            # print(len(probs))
+            for i in range(len(probs)):
+                # print('prob')
+                # print(i)
+                # print(probs[0])
+                if random.random() < probs[i]:
+                    return i
+                    break
+                else:
+                    i += 1
+            return i - 1
+            # print('prob')
+            # print(probs)
 
     def predict(self, X):
+        """
+        Predict the label for a record by adding the weights of all possible labels and selecting the max one
+        @param X: record
+        @return: label
+        """
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
         # print(X)
         # print(type(X))
         prediction = []
         for i in range(len(X)):
-            answer = Tree.decision(self.root,X[i],self.attrNames, [])
-            # print(X[i])
+            answer = Tree.decision(self.root, X[i], self.attrNames, [])
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]
@@ -280,6 +292,9 @@ class Tree(BaseEstimator,ClassifierMixin):
             prediction.append(g)
 
         # print(prediction)
-        g = [x.index(max(x)) for x in prediction]
-        print(g)
+        # prob=[]
+
+        # g = [x.index(max(x)) for x in prediction]
+        g = [Tree.prob(self, x) for x in prediction]
+        # print(g)
         return g

@@ -5,6 +5,7 @@ from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
 from treeOUE import Tree
+from treeOUEmes import Tree as Tree2
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 import numpy as np
@@ -12,9 +13,9 @@ from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer, H
 import DataPreprocessor
 
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5,10]
+epsilon_values=[5]
 depth = 4
-
+# 0.01,0.1,0.5,1,2,3,
 def hash_perturb(io):
     g = client_olh.privatise(io)
     return g
@@ -86,14 +87,14 @@ for xx in database_names:
             print(i)
             i+=1
             clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=client_olh,
-                       ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
-                       domainSize=do, max=c)
+                           ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
+                           domainSize=do, max=c)
             X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
             X_train1, X_test1, y_train1, y_test1 = train_test_split(T.iloc[:, :-1], y, test_size=0.2)
             # X_test = decode(X_test, y_test, c)
             clf.fit(X_train, y_train)
-            print('ccc')
-            print(X_test1)
+            # print('ccc')
+            # print(X_test1)
             start = ti.time()
             pre = clf.predict(X_test1)
             stop = ti.time()

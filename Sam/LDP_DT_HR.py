@@ -5,15 +5,16 @@ from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
 from treeHR import Tree
+from treeHRmes import Tree as Tree2
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 import numpy as np
 from pure_ldp.frequency_oracles import *
 import DataPreprocessor
 
-database_names=['mushroom']
-epsilon_values=[5]
-depth = 1
+database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
+epsilon_values=[0.01,0.1,0.5,1,2,3,5]
+depth = 4
 # 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 def hash_perturb(io):
@@ -62,8 +63,8 @@ for xx in database_names:
     X, y = b.get_data(xx)
     X = X.astype('int')
     feat = list(X.columns)
-    print('uni')
-    print(X['odor'].value_counts())
+    # print('uni')
+    # print(X['odor'].value_counts())
     print(feat)
     # print(X)
     do = []
@@ -90,9 +91,14 @@ for xx in database_names:
         for i in range(1):
             print(i)
             i+=1
-            clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=client_olh,
-                       ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
-                       domainSize=do, max=c)
+            if xx == 'adult' or xx == 'car' or xx == 'spect':
+                clf = Tree2(attrNames=feat, depth=depth, ldpMechanismClient=client_olh,
+                            ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
+                            domainSize=do, max=c)
+            else:
+                clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=client_olh,
+                           ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
+                           domainSize=do, max=c)
             X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
             X_train1, X_test1, y_train1, y_test1 = train_test_split(T.iloc[:, :-1], y, test_size=0.002)
             print(X_test1)

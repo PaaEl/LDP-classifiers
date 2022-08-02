@@ -1,4 +1,5 @@
 import math
+import random
 
 import numpy as np
 import pandas as pd
@@ -262,17 +263,44 @@ class Tree(BaseEstimator,ClassifierMixin):
             Tree.decision(path, obs, attrs_names, lis)
             return lis
 
-
+    def prob(self, x):
+        if sum(x) == 0:
+            for i in range(len(x)):
+                if random.random() < 1 / len(x):
+                    return i
+                    break
+                else:
+                    i += 1
+            return i - 1
+        else:
+            probs = [j / sum(x) for j in x]
+            # print(len(probs))
+            for i in range(len(probs)):
+                # print('prob')
+                # print(i)
+                # print(probs[0])
+                if random.random() < probs[i]:
+                    return i
+                    break
+                else:
+                    i += 1
+            return i - 1
+            # print('prob')
+            # print(probs)
 
     def predict(self, X):
+        """
+        Predict the label for a record by adding the weights of all possible labels and selecting the max one
+        @param X: record
+        @return: label
+        """
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
         # print(X)
         # print(type(X))
         prediction = []
         for i in range(len(X)):
-            answer = Tree.decision(self.root,X[i],self.attrNames, [])
-            # print(X[i])
+            answer = Tree.decision(self.root, X[i], self.attrNames, [])
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]
@@ -280,6 +308,9 @@ class Tree(BaseEstimator,ClassifierMixin):
             prediction.append(g)
 
         # print(prediction)
-        g = [x.index(max(x)) for x in prediction]
-        print(g)
+        # prob=[]
+
+        # g = [x.index(max(x)) for x in prediction]
+        g = [Tree.prob(self, x) for x in prediction]
+        # print(g)
         return g
