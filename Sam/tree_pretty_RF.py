@@ -1,4 +1,5 @@
 import math
+from random import randrange
 
 import pandas as pd
 from anytree import Node, RenderTree
@@ -142,11 +143,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.nodes['root'] = self.root
             Tree.grow_tree(self, self.root, attr_names, depth, feat_size, x, x_pert)
         elif depth >1:
-            estimates = Tree.estimate(self, x_pert, self.epsilon_value, feat_size)
-            pos_est = Tree.not_neg(estimates)
-            feat_rank = Tree.rank(x_pert, pos_est, self.max)
-            run2 = [ii[0] for ii in feat_rank]
-            o = run2.index(max(run2))
+            o = randrange(len(attr_names))
             sel = attr_names[o]
             sel2 = feat_size[o]
             i = 1
@@ -168,9 +165,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         else:
             estimates = Tree.estimate(self, x_pert, self.epsilon_value, feat_size)
             pos_est = Tree.not_neg(estimates)
-            feat_rank = Tree.rank(x_pert, pos_est, self.max)
-            run2 = [ii[0] for ii in feat_rank]
-            o = run2.index(max(run2))
+            o = randrange(len(attr_names))
             sel = attr_names[o]
             sel2 = feat_size[o]
             sel3 = pos_est[o]

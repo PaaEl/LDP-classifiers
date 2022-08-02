@@ -21,24 +21,25 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.max = max
         self.nodes = {}
 
-    '''From pure ldp, perturbs the data'''
-
     def hash_perturb(io, client):
         g = client.privatise(io)
         return g
 
-    def perturb(df, e, server, client, do):
+    def perturb(df, e, server,client, do):
         perturbed_df = pd.DataFrame()
-        i=0
+        i = 0
         for x in df.columns:
+            # print(i)
             epsilon = e
             d = do[i]
+            i += 1
             server.update_params(epsilon, d)
-            client.update_params(epsilon, d)
+            hf = server.get_hash_funcs()
+            client.update_params(epsilon, do[i], hash_funcs= hf)
             tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
             perturbed_df[x] = tempColumn
-            i+=1
         return perturbed_df
+
 
     '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
     def estimate(self,df, e, do):
@@ -48,7 +49,8 @@ class Tree(BaseEstimator,ClassifierMixin):
         for x in df.columns:
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
+            hf = self.ldpServer.get_hash_funcs()
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=hf)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -200,7 +202,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(self.attr_names)
 
         self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert)
-        # print(RenderTree(self.root))
+        print(RenderTree(self.root))
         # print(self.root.children)
 
     def decision(root, obs, attr_names):
