@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pandas as pd
 from anytree import Node, RenderTree
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -33,8 +34,17 @@ class Tree(BaseEstimator,ClassifierMixin):
         for x in df.columns:
             epsilon = e
             f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
-            self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs())
+            print('g')
+            print(self.ldpServer.cohort_count)
+            print(self.ldpServer.bloom_filters)
+
+            self.ldpServer.update_params(epsilon, do[i], f=f)
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs(), f=f)
+            self.ldpServer.estimated_data = np.zeros(do[i])
+            self.ldpServer.normalised_data = []
+            self.ldpServer.bloom_filters = [np.zeros(self.ldpServer.m) for i in range(0, self.ldpServer.num_of_cohorts)]
+            self.ldpServer.cohort_count = np.zeros(self.ldpServer.num_of_cohorts)
+            # print(self.ldpServer.estimated_data)
             # df.loc[:, x].apply(lambda g: g.astype(int))
             # print(x)
             # df.loc[:, x].apply(lambda g: print(g))
@@ -43,6 +53,9 @@ class Tree(BaseEstimator,ClassifierMixin):
             for j in range(0, do[i]):
                 li.append(round(self.ldpServer.estimate(j + 1)))
             lis.append(li)
+            # print('gg')
+            # print(self.ldpServer.estimated_data)
+            print(lis)
             i += 1
         return lis
 
@@ -182,16 +195,16 @@ class Tree(BaseEstimator,ClassifierMixin):
         return io[0]
 
     def fit(self, X, y):
-        print('X')
-        print(X)
-        print(X.iloc[1,1])
+        # print('X')
+        # print(X)
+        # print(X.iloc[1,1])
         # X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
         self.X_df_ = pd.DataFrame(X)
-        print(self.X_df_.iloc[1, 1])
+        # print(self.X_df_.iloc[1, 1])
         self.y_ = y
-        print(type(y[0]))
+        # print(type(y[0]))
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
@@ -207,8 +220,8 @@ class Tree(BaseEstimator,ClassifierMixin):
             categories.append(str(self.y_[i]))
             # for j in range(len(self.attrNames)):
             #     data[j].append(self.X_[i][j])
-        print('cate')
-        print(categories)
+        # print('cate')
+        # print(categories)
         w = Tree.estimate(self, self.X_df_, self.epsilon_value, self.domainSize)
         # print('w')
         # print(w)
@@ -222,8 +235,8 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(run)
 
         self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth, run, self.domainSize, n, le)
-        # print(RenderTree(self.root))
-        # print(self.root.children)
+        print(RenderTree(self.root))
+        print(self.root.children)
         # print('data')
         # print(data)
         # print(categories)
@@ -232,8 +245,9 @@ class Tree(BaseEstimator,ClassifierMixin):
         if not root.children:
             return None
         else:
+            # print('obs')
             # print(obs)
-            # print(root.children[0])
+            # print(root.children)
             feat = root.children[0].name.split('#')[0]
             # print(feat)
             feat_ind = attrs_names.index(feat)
@@ -256,12 +270,14 @@ class Tree(BaseEstimator,ClassifierMixin):
         prediction = []
         for i in range(len(X)):
             answer = Tree.decision(self.root,X[i],self.attrNames, [])
+            # print(X[i])
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]
+            # print(g)
             prediction.append(g)
 
         # print(prediction)
         g = [x.index(max(x)) for x in prediction]
-        # print(g)
+        print(g)
         return g

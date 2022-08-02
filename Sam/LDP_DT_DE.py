@@ -5,6 +5,7 @@ from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
 from tree import Tree
+from treemes import Tree as Tree2
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 import numpy as np
@@ -13,8 +14,8 @@ import DataPreprocessor
 
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = 1
-
+depth = 4
+# 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 
 '''From pure ldp, perturbs the data'''
@@ -25,7 +26,7 @@ def hash_perturb(io):
 '''Connects the feature value to the label value'''
 def encode(df, c):
     perturbed_df = pd.DataFrame()
-    print(df)
+    # print(df)
     y = df.iloc[: , -1]
     for x in df.columns:
         tempColumn = df.loc[:, x].apply(lambda item: item * c)
@@ -33,7 +34,7 @@ def encode(df, c):
         perturbed_df[x] = tempColumn
     g = perturbed_df.iloc[:, :-1]
     g.insert(len(g.columns),'label',y)
-    print(g)
+    # print(g)
     return g
 '''unused'''
 def decode(df, cat, c):
@@ -65,7 +66,19 @@ for xx in database_names:
     X, y = b.get_data(xx)
     X = X.astype('int')
     feat = list(X.columns)
-    print(feat)
+    # print('uni1')
+    # print(X['relationship'].value_counts())
+    # print('uni')
+    # print(X['relationship'].value_counts())
+    # print('uni')
+    # print(X['education'].value_counts())
+    # print('uni')
+    # print(X['age'].value_counts())
+    # print('uni')
+    # print(X['occupation'].value_counts())
+    # print('uni')
+    # print(X['hours-per-week'].value_counts())
+    # print(feat)
     do = []
     for x in X.columns:
         do.append(max(X[x]) + 1)
@@ -84,6 +97,20 @@ for xx in database_names:
         j = encode(X, c)
         v = perturb(j.iloc[:, :-1], epsilon_value)
         balanced_accuracy = []
+        # print('uni')
+        # print(v['relationship'].value_counts())
+        # print('uni')
+        # print(v['education'].value_counts())
+        # print('uni')
+        # print(v['age'].value_counts())
+        # print('uni')
+        # print(v['occupation'].value_counts())
+        # print('uni')
+        # print(v['hours-per-week'].value_counts())
+        # v = v.drop('education',axis=1)
+        # v = v.drop('relationship',axis=1)
+        # print('uni')
+        # print(v['relationship'].value_counts())
         accuracy = []
         times = []
         f1 = []
@@ -92,13 +119,18 @@ for xx in database_names:
         # ten times and get the average
         for i in range(10):
             i+=1
-            clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
-                       ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
-                       domainSize=do, max=c)
+            if xx == 'adult' or xx == 'car' or xx == 'spect':
+                clf = Tree2(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
+                           ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
+                           domainSize=do, max=c)
+            else:
+                clf = Tree(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
+                           ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
+                           domainSize=do, max=c)
             # train on connected data
             X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
             # to test on data that hasn't been connected
-            X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.2)
+            X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.8)
             # X_test = decode(X_test, y_test, c)
             clf.fit(X_train, y_train)
             start = ti.time()

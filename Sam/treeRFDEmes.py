@@ -1,4 +1,5 @@
 import math
+from random import randrange
 
 import pandas as pd
 from anytree import Node, RenderTree
@@ -20,30 +21,21 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
-        # print(self.ldpServer.get_hash_funcs)
 
     def estimate(self,df, e, do):
         lis = []
         i = 0
         # print(df)
         for x in df.columns:
-            # print('lis')
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            # print('hash')
-            # print(self.ldpServer.get_hash_funcs())
-            hf = self.ldpServer.get_hash_funcs()
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs= hf)
+            self.ldpClient.update_params(epsilon, do[i])
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
-            # print(self.ldpServer.aggregated_data)
-            # print(len(self.ldpServer.aggregated_data))
             li = []
             for j in range(0, do[i]):
                 li.append(round(self.ldpServer.estimate(j + 1)))
             lis.append(li)
-            # print(lis)
             i += 1
-        print(lis)
         return lis
 
     def not_neg(lis):
@@ -102,29 +94,23 @@ class Tree(BaseEstimator,ClassifierMixin):
         return 1 + enj
 
     def create_node(feature, value, parent, count, le):
-        # print('lis')
-        # print(feature)
-        # # print(count)
-        # # print(le)
-        # dfd = [x * sum(count) / le for x in count]
-        # print(dfd)
-        return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
+        return Node(feature + '#' + str(value), value = value, parent= parent,  count= [1/(x * sum(count) /le) if x !=0 else 0 for x in count])
 
-    def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
+    def grow_tree(self, parent,attrs_names, depth,  do, amount, le):
         # print('dep')
         # print(depth)
         if parent is None:
             self.root = Node('root')
             self.nodes['root'] = self.root
-            Tree.grow_tree(self, self.root, attrs_names, depth -1, run, do, amount,le)
+            Tree.grow_tree(self, self.root, attrs_names, depth -1,  do, amount,le)
         elif depth > 0:
             # if depth == 0:
             # print('elif')
             # print(self.nodes)
             # print(attrs_names)
             # print(do)
-            run2 = [ii[0] for ii in run]
-            o = run2.index(max(run2))
+            # run2 = [ii[0] for ii in run]
+            o = randrange(len(attrs_names))
             sel = attrs_names[o]
             # print(category)
             # print(sel)
@@ -143,22 +129,19 @@ class Tree(BaseEstimator,ClassifierMixin):
                 # print(sel4)
                 sel5 = do[:o] + do[o+1:]
                 sel6 = amount[:o] + amount[o+1:]
-                sel7 = run[:o] + run[o+1:]
+                # sel7 = run[:o] + run[o+1:]
                 # print('i')
                 # print(i)
                 lis = sel3[i-1:i+self.max-1]
-                # print('lis')
-                # print(lis)
-                # print(le)
                 self.nodes[sel + '#'+ str(j)] = Tree.create_node(sel, j, parent, lis, le)
                 # print(self.nodes)
-                Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1, sel7, sel5, sel6, le)
+                Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1,  sel5, sel6, le)
                 j +=1
                 i +=self.max
             # print(self.nodes)
         else:
-            run2 = [ii[0] for ii in run]
-            o = run2.index(max(run2))
+            # run2 = [ii[0] for ii in run]
+            o = randrange(len(attrs_names))
             sel = attrs_names[o]
             # print(category)
             # print(sel)
@@ -173,7 +156,7 @@ class Tree(BaseEstimator,ClassifierMixin):
                 sel4 = attrs_names[:o] + attrs_names[o:]
                 sel5 = do[:o] + do[o:]
                 sel6 = amount[:o] + amount[o:]
-                sel7 = run[:o] + run[o:]
+                # sel7 = run[:o] + run[o:]
                 # print('i')
                 # print(i)
                 lis = sel3[i - 1:i + self.max - 1]
@@ -214,15 +197,15 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(w)
         n = Tree.not_neg(w)
         # print(n)
-        run = Tree.rank(self.X_df_, n, self.max)
+        # run = Tree.rank(self.X_df_, n, self.max)
         # print('run')
         # print(run)
         # print(len(run))
-        if self.depth > len(run):
-            self.depth = len(run)
+        if self.depth > len(self.X_[0]):
+            self.depth = len(self.X_[0])
 
-        self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth, run, self.domainSize, n, le)
-        print(RenderTree(self.root))
+        self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth,  self.domainSize, n, le)
+        # print(RenderTree(self.root))
         # print(self.root.children)
         # print('data')
         # print(data)
@@ -233,7 +216,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             return None
         else:
             # print(obs)
-            # print(root.children)
+            # print(root.children[0])
             feat = root.children[0].name.split('#')[0]
             # print(feat)
             feat_ind = attrs_names.index(feat)
@@ -254,12 +237,13 @@ class Tree(BaseEstimator,ClassifierMixin):
         prediction = []
         for i in range(len(X)):
             answer = Tree.decision(self.root, X[i], self.attrNames, [])
-            # print('ans')
-            # print(answer)
+            print('ans')
+            print(answer)
             g = [sum(j) for j in zip(*answer)]
+            print(g)
             prediction.append(g)
 
-        # print(prediction)
-        g = [x.index(max(x)) for x in prediction]
-        # print(g)
+        print(prediction)
+        g = [x.index(min(x)) for x in prediction]
+        print(g)
         return g

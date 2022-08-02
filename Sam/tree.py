@@ -93,10 +93,12 @@ class Tree(BaseEstimator,ClassifierMixin):
         return 1 + enj
     '''Makes a node with feature name, value, parent and weight (count of feature value divided by total amount of records) '''
     def create_node(feature, value, parent, count, le):
-        print('lis')
-        print(feature)
-        print(count)
-        print(le)
+        # print('lis')
+        # print(feature)
+        # # print(count)
+        # # print(le)
+        # dfd = [x * sum(count) / le for x in count]
+        # print(dfd)
         return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
@@ -189,8 +191,10 @@ class Tree(BaseEstimator,ClassifierMixin):
         @param X: data
         @param y: labels
         """
-        print('X')
-        print(X)
+        # print('X')
+        # print(X)
+        # print('uni3')
+        # print(X['odor'].value_counts())
         X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
@@ -199,9 +203,9 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.resultType = type(y[0])
         if self.attrNames is None:
             self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        print('ass')
-        print(self.attrNames)
-        print(self.X_[0])
+        # print('ass')
+        # print(self.attrNames)
+        # print(self.X_[0])
         assert (len(self.attrNames) == len(self.X_[0]))
 
         data = [[] for i in range(len(self.attrNames))]
@@ -273,6 +277,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]
+            # print(g)
             prediction.append(g)
 
         # print(prediction)

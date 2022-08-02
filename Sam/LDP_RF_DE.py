@@ -11,10 +11,10 @@ import numpy as np
 from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
 import DataPreprocessor
 
-database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5]
+database_names=['mushroom']
+epsilon_values=[5]
 depth = 4
-forest_size = 1
+forest_size = 20
 lis = []
 lis_pred = []
 frac_data = 1
@@ -62,7 +62,7 @@ for xx in database_names:
     lis_pred = []
     b = DataPreprocessor.DataPreprocessor()
     X, y = b.get_data(xx)
-    print(X)
+    # print(X)
     X = X.astype('int')
     feat = list(X.columns)
     # print(feat)
@@ -107,7 +107,7 @@ for xx in database_names:
             # X_test = decode(X_test, y_test, c)
             clf.fit(X_train, y_train)
             lis.append(clf)
-        X_train1, X_test1, y_train1, y_test1 = train_test_split(T.iloc[:, :-1], y, test_size=0.2)
+        X_train1, X_test1, y_train1, y_test1 = train_test_split(T.iloc[:, :-1], y, test_size=0.8)
         for l in lis:
             # print('x1')
             # print(X_test1)
@@ -135,9 +135,9 @@ for xx in database_names:
         f1.append(f1_score(y_test1, jj, average='weighted'))
         prec.append(precision_score(y_test1, jj, average='weighted'))
         recall.append(recall_score(y_test1, jj, average='weighted'))
-        print('fdfs')
-        print(balanced_accuracy)
-        print(times)
+        # print('fdfs')
+        # print(balanced_accuracy)
+        # print(times)
         scores = {'score_time': sum(times), 'test_accuracy': accuracy, 'test_balanced_accuracy': balanced_accuracy,
               'test_f1_macro': f1, 'test_precision_macro': prec,
               'test_recall_macro': recall}

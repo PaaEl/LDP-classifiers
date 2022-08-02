@@ -1,5 +1,6 @@
 import math
 
+import numpy as np
 import pandas as pd
 from anytree import Node, RenderTree
 from sklearn.base import BaseEstimator, ClassifierMixin
@@ -23,7 +24,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.max = max
         self.nodes = {}
 
-    def estimate(self,df, e, do):
+    def estimate(self, df, e, do):
         lis = []
         i = 0
         # print('do')
@@ -32,9 +33,18 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(df.iloc[1,1])
         for x in df.columns:
             epsilon = e
-            f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
-            self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs())
+            f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
+            print('g')
+            print(self.ldpServer.cohort_count)
+            print(self.ldpServer.bloom_filters)
+
+            self.ldpServer.update_params(epsilon, do[i], f=f)
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs(), f=f)
+            self.ldpServer.estimated_data = np.zeros(do[i])
+            self.ldpServer.normalised_data = []
+            self.ldpServer.bloom_filters = [np.zeros(self.ldpServer.m) for i in range(0, self.ldpServer.num_of_cohorts)]
+            self.ldpServer.cohort_count = np.zeros(self.ldpServer.num_of_cohorts)
+            # print(self.ldpServer.estimated_data)
             # df.loc[:, x].apply(lambda g: g.astype(int))
             # print(x)
             # df.loc[:, x].apply(lambda g: print(g))
@@ -43,6 +53,9 @@ class Tree(BaseEstimator,ClassifierMixin):
             for j in range(0, do[i]):
                 li.append(round(self.ldpServer.estimate(j + 1)))
             lis.append(li)
+            # print('gg')
+            # print(self.ldpServer.estimated_data)
+            print(lis)
             i += 1
         return lis
 

@@ -20,36 +20,27 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
-        # print(self.ldpServer.get_hash_funcs)
-
+    '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
     def estimate(self,df, e, do):
         lis = []
         i = 0
         # print(df)
         for x in df.columns:
-            # print('lis')
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            # print('hash')
-            # print(self.ldpServer.get_hash_funcs())
-            hf = self.ldpServer.get_hash_funcs()
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs= hf)
+            self.ldpClient.update_params(epsilon, do[i])
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
-            # print(self.ldpServer.aggregated_data)
-            # print(len(self.ldpServer.aggregated_data))
             li = []
             for j in range(0, do[i]):
                 li.append(round(self.ldpServer.estimate(j + 1)))
             lis.append(li)
-            # print(lis)
             i += 1
-        print(lis)
         return lis
-
+    '''Negative counts set to 0'''
     def not_neg(lis):
         t = [[j if j > 0 else 0 for j in y] for y in lis]
         return t
-
+    '''Labels each feature with it's information gain'''
     def rank(df, lis, c):
         ran = []
         i = 0
@@ -63,13 +54,13 @@ class Tree(BaseEstimator,ClassifierMixin):
             ran.append(tu)
             i += 1
         return ran
-
+    '''Used for calculating information gain'''
     def entro(x):
         if x == 0:
             return 0
         else:
             return x * math.log2(x)
-
+    '''Calculates information gain'''
     def gain(lis, c):
         fraction = []
         prob = []
@@ -100,17 +91,26 @@ class Tree(BaseEstimator,ClassifierMixin):
             enj += fraction[i - 1] * en
             i += 1
         return 1 + enj
-
+    '''Makes a node with feature name, value, parent and weight (count of feature value divided by total amount of records) '''
     def create_node(feature, value, parent, count, le):
         # print('lis')
         # print(feature)
-        # # print(count)
-        # # print(le)
-        # dfd = [x * sum(count) / le for x in count]
-        # print(dfd)
-        return Node(feature + '#' + str(value), value = value, parent= parent,  count= [x * sum(count) / le for x in count])
+        # print(count)
+        # print(le)
+        return Node(feature + '#' + str(value), value = value, parent= parent,  count= [1/(x * sum(count) /le) if x !=0 else 0 for x in count])
 
     def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
+        """
+
+        @param parent: parent node
+        @param attrs_names: feature names
+        @param depth: depth remaining
+        @param run: list of features and their info gain
+        @param do: list of feature domainsizes
+        @param amount: counts of feature values
+        @param le: amount of records in total
+        @return: tree
+        """
         # print('dep')
         # print(depth)
         if parent is None:
@@ -147,9 +147,6 @@ class Tree(BaseEstimator,ClassifierMixin):
                 # print('i')
                 # print(i)
                 lis = sel3[i-1:i+self.max-1]
-                # print('lis')
-                # print(lis)
-                # print(le)
                 self.nodes[sel + '#'+ str(j)] = Tree.create_node(sel, j, parent, lis, le)
                 # print(self.nodes)
                 Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1, sel7, sel5, sel6, le)
@@ -182,13 +179,20 @@ class Tree(BaseEstimator,ClassifierMixin):
                 i += self.max
             # print(self.nodes)
             return None
-
+    '''unused'''
     def hash_perturb_get0(io):
         return io[0]
-
+    ''''''
     def fit(self, X, y):
+        """
+        Fit data
+        @param X: data
+        @param y: labels
+        """
         # print('X')
         # print(X)
+        # print('uni3')
+        # print(X['odor'].value_counts())
         X, y = check_X_y(X, y)
         self.X_ = X
         le = len(X)
@@ -222,18 +226,25 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(run)
 
         self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth, run, self.domainSize, n, le)
-        print(RenderTree(self.root))
+        # print(RenderTree(self.root))
         # print(self.root.children)
         # print('data')
         # print(data)
         # print(categories)
 
     def decision(root, obs, attrs_names, lis):
+        """
+        Returns the predicted label for a record
+        @param obs: the record
+        @param attrs_names: feature names
+        @param lis: empty list
+        @return: list of weights along the path to the leaf corresponding to the record
+        """
         if not root.children:
             return None
         else:
             # print(obs)
-            # print(root.children)
+            # print(root.children[0])
             feat = root.children[0].name.split('#')[0]
             # print(feat)
             feat_ind = attrs_names.index(feat)
@@ -241,22 +252,32 @@ class Tree(BaseEstimator,ClassifierMixin):
             val = obs[feat_ind]
             # print(val)
             path = root.children[val]
+            # print('path')
+            # print(path)
             lis.append(path.count)
             # print(lis)
             Tree.decision(path, obs, attrs_names, lis)
             return lis
 
+
+
     def predict(self, X):
+        """
+        Predict the label for a record by adding the weights of all possible labels and selecting the max one
+        @param X: record
+        @return: label
+        """
         check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
         # print(X)
         # print(type(X))
         prediction = []
         for i in range(len(X)):
-            answer = Tree.decision(self.root, X[i], self.attrNames, [])
+            answer = Tree.decision(self.root,X[i],self.attrNames, [])
             # print('ans')
             # print(answer)
             g = [sum(j) for j in zip(*answer)]
+            # print(g)
             prediction.append(g)
 
         # print(prediction)

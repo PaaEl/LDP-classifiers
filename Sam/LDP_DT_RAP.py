@@ -14,10 +14,10 @@ from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer, H
     RAPPORServer
 import DataPreprocessor
 
-database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = 4
-
+database_names=['htru']
+epsilon_values=[5]
+depth = 2
+# 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 def hash_perturb(io):
     g = client_olh.privatise(io)
@@ -48,10 +48,10 @@ def decode(df, cat, c):
 def perturb(df, e):
     perturbed_df = pd.DataFrame()
     i = 0
-    print(do)
-    print(df)
+    # print(do)
+    # print(df)
     for x in df.columns:
-        print(i)
+        # print(i)
         epsilon = e
         d = do[i]
         i+=1
@@ -59,8 +59,8 @@ def perturb(df, e):
         # print(d)
         f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
 
-        server_olh.update_params(epsilon, d)
-        client_olh.update_params(epsilon, d, hash_funcs=server_olh.get_hash_funcs())
+        server_olh.update_params(epsilon, d, f=f)
+        client_olh.update_params(epsilon, d, hash_funcs=server_olh.get_hash_funcs(), f=f)
         tempColumn = df.loc[:, x].apply(lambda item: hash_perturb(item + 1))
         perturbed_df[x] = tempColumn
     return perturbed_df
@@ -70,7 +70,10 @@ for xx in database_names:
     b = DataPreprocessor.DataPreprocessor()
     X, y = b.get_data(xx)
     X = X.astype('int')
+    # X = X.drop('std_dev_dm_snr', axis=1)
     feat = list(X.columns)
+
+    # X = X.drop('stddevdmsnr', axis=1)
     print(feat)
     do = []
     for x in X.columns:
@@ -78,9 +81,11 @@ for xx in database_names:
     X.insert(len(X.columns),'label',y)
     c = max(y) + 1
     do = [gg * c for gg in do]
-    epsilon = 10
+    epsilon = 5
     d = 10
     f = round(1/(0.5*math.exp(epsilon/2)+0.5), 2)
+    print('f')
+    print(f)
     server_olh = RAPPORServer(f, 128, 8, d)
     client_olh = RAPPORClient(f, 128, server_olh.get_hash_funcs(), 8)
 
@@ -89,8 +94,8 @@ for xx in database_names:
     for epsilon_value in epsilon_values:
         j = encode(X, c)
         v = perturb(j.iloc[:, :-1], epsilon_value)
-        print('wat')
-        print(v.iloc[1,1])
+        # print('wat')
+        # print(v.iloc[1,1])
         balanced_accuracy = []
         accuracy = []
         times = []
@@ -103,7 +108,7 @@ for xx in database_names:
                        ldpMechanismServer=server_olh, epsilon_value=epsilon_value,
                        domainSize=do, max=c)
             X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
-            X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.2)
+            X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.001)
             # X_test = decode(X_test, y_test, c)
             clf.fit(X_train, y_train)
             start = ti.time()

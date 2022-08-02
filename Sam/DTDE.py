@@ -86,21 +86,21 @@ for x in database_names:
     scoresDataFrame.to_csv("./Experiments/test_run_" +
                            date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
 
-    classifierDataFrame = pd.DataFrame()
-    for epsilon_value in epsilon_values:
-        v = perturb(X, epsilon_value)
-        clfC = tree.DecisionTreeClassifier()
-        scores = cross_validate(clfC, v, y,
-                                scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
-                                         'recall_macro'])
-        scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
-        scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
-        rowName = 'Decision tree' + '/' + x + '/'
-        scoresDataFrame = scoresDataFrame.add_prefix(rowName)
-        classifierDataFrame[epsilon_value] = scoresDataFrame
-    classifierDataFrame.to_csv("./Experiments/test_run_" +
-                               date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
-
-
+    # classifierDataFrame = pd.DataFrame()
+    # for epsilon_value in epsilon_values:
+    #     v = perturb(X, epsilon_value)
+    #     clfC = tree.DecisionTreeClassifier()
+    #     scores = cross_validate(clfC, v, y,
+    #                             scoring=['accuracy', 'balanced_accuracy', 'f1_macro', 'precision_macro',
+    #                                      'recall_macro'])
+    #     scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
+    #     scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
+    #     rowName = 'Decision tree' + '/' + x + '/'
+    #     scoresDataFrame = scoresDataFrame.add_prefix(rowName)
+    #     classifierDataFrame[epsilon_value] = scoresDataFrame
+    # classifierDataFrame.to_csv("./Experiments/test_run_" +
+    #                            date.today().__str__() + '.csv', mode='a', sep=';', float_format='%.3f')
+    #
+    #
 
 
