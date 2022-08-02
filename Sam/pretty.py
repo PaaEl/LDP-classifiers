@@ -36,13 +36,13 @@ tree_a = tree_pretty
 tree_hr = tree_hr
 tree_rap = tree_rap
 
-ldp_mechanism = {'de': (dec, des, tree_a)}
-database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = [1,2,6]
+ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
+database_names=['mushroom']
+epsilon_values=[5]
+depth = [4]
 
-# , 'olh': (lhc, lhs, tree_a), 'hr': (dec, des, tree_hr),
-#                  'he': (hec, hes, tree_a), 'oue': (dec, des, tree_a), 'rap': (dec, des, tree_a)
+# 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (dec, des, tree_hr),
+#                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
 # 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 
@@ -70,6 +70,7 @@ for xxxx in depth:
     for xxx in ldp_mechanism:
         a = ldp_mechanism[xxx]
         server = a[1]
+        print(server)
         client = a[0]
         tree = a[2]
         for xx in database_names:
@@ -101,8 +102,8 @@ for xxxx in depth:
                 # ten times and get the average
                 for i in range(10):
                     i += 1
-                    clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
-                                    ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
+                    clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
+                                    ldpMechanismServer=server, epsilon_value=epsilon_value,
                                     domainSize=do, max=c)
                     # train on connected data
                     # X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
@@ -123,7 +124,7 @@ for xxxx in depth:
                           'test_f1_macro': f1, 'test_precision_macro': prec,
                           'test_recall_macro': recall}
                 scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
-                rowName = xxx + '/' + xx + '/' + 'depth' + str(depth) + '/'
+                rowName = xxx + '/' + xx + '/' + 'dpth' + str(depth) + '/'
                 scoresDataFrame = scoresDataFrame.add_prefix(rowName)
                 classifierDataFrame[epsilon_value] = scoresDataFrame
             classifierDataFrame.to_csv("./Experiments/test_run_" +

@@ -6,8 +6,8 @@ from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
 import tree_pretty_RF
-import tree_hr_RF
-import tree_rap_RF
+import tree_pretty_RF_hr
+import tree_pretty_RF_rap
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 import numpy as np
@@ -33,17 +33,17 @@ if f >= 1:
 raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
 tree_a = tree_pretty_RF
-tree_hr = tree_hr_RF
-tree_rap = tree_rap_RF
+tree_hr = tree_pretty_RF_hr
+tree_rap = tree_pretty_RF_rap
 
-ldp_mechanism = {'de': (dec, des, tree_a)}
-database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depths = [1,2,6]
-forest_size = [1,20,200]
+ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
+database_names=['mushroom']
+epsilon_values=[5]
+depths = [2]
+forest_size = [10]
 
-# , 'olh': (lhc, lhs, tree_a), 'hr': (dec, des, tree_hr),
-#                  'he': (hec, hes, tree_a), 'oue': (dec, des, tree_a), 'rap': (dec, des, tree_a)
+# 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
+#                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
 # 0.01,0.1,0.5,1,2,3,
 # 'adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru'
 
@@ -107,8 +107,8 @@ for xxxxx in forest_size:
                     # ten times and get the average
                     for i in range(fo):
                         i += 1
-                        clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=DEClient(epsilon=epsilon, d=d),
-                                        ldpMechanismServer=DEServer(epsilon=epsilon, d=d), epsilon_value=epsilon_value,
+                        clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
+                                        ldpMechanismServer=server, epsilon_value=epsilon_value,
                                         domainSize=do, max=c)
                         # train on connected data
                         # X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
@@ -138,7 +138,7 @@ for xxxxx in forest_size:
                               'test_f1_macro': f1, 'test_precision_macro': prec,
                               'test_recall_macro': recall}
                     scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
-                    rowName = xxx + '/' + xx + '/' + 'depth' + str(depth) + '/'
+                    rowName = xxx + '/' + xx + '/' + 'dpth' + str(depth) + '/'+ 'size' + str(fo) + '/'
                     scoresDataFrame = scoresDataFrame.add_prefix(rowName)
                     classifierDataFrame[epsilon_value] = scoresDataFrame
                 classifierDataFrame.to_csv("./Experiments/test_run_" +

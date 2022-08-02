@@ -53,7 +53,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
-                li.append(round(self.ldpServer.estimate(j + 1)))
+                li.append(round(self.ldpServer.estimate(j + 1,suppress_warnings=True)))
             lis.append(li)
             i += 1
         # print('estimates')

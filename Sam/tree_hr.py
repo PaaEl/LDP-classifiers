@@ -28,14 +28,18 @@ class Tree(BaseEstimator,ClassifierMixin):
     def perturb(df, e, server,client, do):
         perturbed_df = pd.DataFrame()
         i = 0
+        # print(df.columns)
         for x in df.columns:
             # print(i)
+            # print(do)
             epsilon = e
             d = do[i]
-            i += 1
+
             server.update_params(epsilon, d)
+            # print(server)
             hf = server.get_hash_funcs()
             client.update_params(epsilon, do[i], hash_funcs= hf)
+            i += 1
             tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
             perturbed_df[x] = tempColumn
         return perturbed_df
@@ -54,7 +58,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
-                li.append(round(self.ldpServer.estimate(j + 1)))
+                li.append(round(self.ldpServer.estimate(j + 1,suppress_warnings=True)))
             lis.append(li)
             i += 1
         # print('estimates')
@@ -202,7 +206,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(self.attr_names)
 
         self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert)
-        print(RenderTree(self.root))
+        # print(RenderTree(self.root))
         # print(self.root.children)
 
     def decision(root, obs, attr_names):

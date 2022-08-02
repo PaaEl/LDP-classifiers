@@ -1,4 +1,5 @@
 import math
+from random import randrange
 
 import pandas as pd
 from anytree import Node, RenderTree
@@ -29,31 +30,38 @@ class Tree(BaseEstimator,ClassifierMixin):
 
     def perturb(df, e, server, client, do):
         perturbed_df = pd.DataFrame()
-        i=0
+        i = 0
+        # print(df.columns)
         for x in df.columns:
+            # print(i)
+            # print(do)
             epsilon = e
             d = do[i]
+
             server.update_params(epsilon, d)
-            client.update_params(epsilon, d)
+            # print(server)
+            hf = server.get_hash_funcs()
+            client.update_params(epsilon, do[i], hash_funcs=hf)
+            i += 1
             tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
             perturbed_df[x] = tempColumn
-            i+=1
         return perturbed_df
 
     '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
-    def estimate(self,df, e, do):
+
+    def estimate(self, df, e, do):
         lis = []
         i = 0
         # print(df)
         for x in df.columns:
             epsilon = e
             self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
-            # print(self.ldpServer)
+            hf = self.ldpServer.get_hash_funcs()
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=hf)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
-                li.append(round(self.ldpServer.estimate(j + 1,suppress_warnings=True)))
+                li.append(round(self.ldpServer.estimate(j + 1, suppress_warnings=True)))
             lis.append(li)
             i += 1
         # print('estimates')
@@ -143,11 +151,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.nodes['root'] = self.root
             Tree.grow_tree(self, self.root, attr_names, depth, feat_size, x, x_pert)
         elif depth >1:
-            estimates = Tree.estimate(self, x_pert, self.epsilon_value, feat_size)
-            pos_est = Tree.not_neg(estimates)
-            feat_rank = Tree.rank(x_pert, pos_est, self.max)
-            run2 = [ii[0] for ii in feat_rank]
-            o = run2.index(max(run2))
+            o = randrange(len(attr_names))
             sel = attr_names[o]
             sel2 = feat_size[o]
             i = 1
@@ -169,9 +173,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         else:
             estimates = Tree.estimate(self, x_pert, self.epsilon_value, feat_size)
             pos_est = Tree.not_neg(estimates)
-            feat_rank = Tree.rank(x_pert, pos_est, self.max)
-            run2 = [ii[0] for ii in feat_rank]
-            o = run2.index(max(run2))
+            o = randrange(len(attr_names))
             sel = attr_names[o]
             sel2 = feat_size[o]
             sel3 = pos_est[o]

@@ -1,4 +1,5 @@
 import math
+from random import randrange
 
 import pandas as pd
 from anytree import Node, RenderTree
@@ -11,7 +12,7 @@ class Tree(BaseEstimator,ClassifierMixin):
                  epsilon_value=None, domainSize=None, max=None):
         if attrNames is not None:
             attrNames = [''.join(i for i in x if i.isalnum()).replace(' ', '_') for x in attrNames]
-        self.attrNames = attrNames
+        self.attr_names = attrNames
         self.depth = depth
         self.ldpServer = ldpMechanismServer
         self.ldpClient = ldpMechanismClient
@@ -20,8 +21,32 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
+
+    '''From pure ldp, perturbs the data'''
+
+    def hash_perturb(io, client):
+        g = client.privatise(io)
+        return g
+
+    def perturb(df, e, server, client, do):
+        perturbed_df = pd.DataFrame()
+        i = 0
+        for x in df.columns:
+            # print(i)
+            epsilon = e
+            d = do[i]
+            i += 1
+            f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
+
+            server.update_params(epsilon, d, f=f)
+            client.update_params(epsilon, d, hash_funcs=server.get_hash_funcs(), f=f)
+            tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
+            perturbed_df[x] = tempColumn
+        return perturbed_df
+
     '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
-    def estimate(self,df, e, do):
+
+    def estimate(self, df, e, do):
         lis = []
         i = 0
         # print(df)
@@ -32,9 +57,11 @@ class Tree(BaseEstimator,ClassifierMixin):
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
-                li.append(round(self.ldpServer.estimate(j + 1)))
+                li.append(round(self.ldpServer.estimate(j + 1, suppress_warnings=True)))
             lis.append(li)
             i += 1
+        # print('estimates')
+        # print(len(lis))
         return lis
     '''Negative counts set to 0'''
     def not_neg(lis):
@@ -92,21 +119,23 @@ class Tree(BaseEstimator,ClassifierMixin):
             i += 1
         return 1 + enj
     '''Makes a node with feature name, value, parent and weight (count of feature value divided by total amount of records) '''
-    def create_node(feature, value, parent, count, le):
+    def create_node(feature, value, parent, label, leaf):
         # print('lis')
         # print(feature)
-        # print(count)
-        # print(le)
-        return Node(feature + '#' + str(value), value = value, parent= parent,  count= [1/(x * sum(count) /le) if x !=0 else 0 for x in count])
+        # # print(count)
+        # # print(le)
+        # dfd = [x * sum(count) / le for x in count]
+        # print(dfd)
+        return Node(feature + '#' + str(value), value = value, parent= parent,  label = label, is_leaf = leaf)
 
-    def grow_tree(self, parent,attrs_names, depth, run, do, amount, le):
+    def grow_tree(self, parent, attr_names, depth, feat_size, x, x_pert):
         """
 
         @param parent: parent node
-        @param attrs_names: feature names
+        @param attr_names: feature names
         @param depth: depth remaining
         @param run: list of features and their info gain
-        @param do: list of feature domainsizes
+        @param feat_size: list of feature domainsizes
         @param amount: counts of feature values
         @param le: amount of records in total
         @return: tree
@@ -116,127 +145,68 @@ class Tree(BaseEstimator,ClassifierMixin):
         if parent is None:
             self.root = Node('root')
             self.nodes['root'] = self.root
-            Tree.grow_tree(self, self.root, attrs_names, depth -1, run, do, amount,le)
-        elif depth > 0:
-            # if depth == 0:
-            # print('elif')
-            # print(self.nodes)
-            # print(attrs_names)
-            # print(do)
-            run2 = [ii[0] for ii in run]
-            o = run2.index(max(run2))
-            sel = attrs_names[o]
-            # print(category)
-            # print(sel)
-            sel2 = do[o]
-            sel3 = amount[o]
-            # print(sel2)
-            # print('sel3')
-            # print(sel3)
+            Tree.grow_tree(self, self.root, attr_names, depth, feat_size, x, x_pert)
+        elif depth >1:
+            o = randrange(len(attr_names))
+            sel = attr_names[o]
+            sel2 = feat_size[o]
             i = 1
             j = 0
             while i <= sel2:
-                sel4 = attrs_names[:o] + attrs_names[o+1:]
-                # print('attr')
-                # print(sel)
-                # print(attrs_names)
-                # print(sel4)
-                sel5 = do[:o] + do[o+1:]
-                sel6 = amount[:o] + amount[o+1:]
-                sel7 = run[:o] + run[o+1:]
-                # print('i')
-                # print(i)
-                lis = sel3[i-1:i+self.max-1]
-                self.nodes[sel + '#'+ str(j)] = Tree.create_node(sel, j, parent, lis, le)
-                # print(self.nodes)
-                Tree.grow_tree(self, self.nodes[sel+ '#' + str(j)], sel4, depth - 1, sel7, sel5, sel6, le)
-                j +=1
-                i +=self.max
-            # print(self.nodes)
-        else:
-            run2 = [ii[0] for ii in run]
-            o = run2.index(max(run2))
-            sel = attrs_names[o]
-            # print(category)
-            # print(sel)
-            sel2 = do[o]
-            sel3 = amount[o]
-            # print(sel2)
-            # print('sel3')
-            # print(sel3)
-            i = 1
-            j = 0
-            while i <= sel2:
-                sel4 = attrs_names[:o] + attrs_names[o:]
-                sel5 = do[:o] + do[o:]
-                sel6 = amount[:o] + amount[o:]
-                sel7 = run[:o] + run[o:]
-                # print('i')
-                # print(i)
-                lis = sel3[i - 1:i + self.max - 1]
-                self.nodes[sel + '#' + str(j)] = Tree.create_node(sel, j, parent, lis, le)
+                sel4 = attr_names[:o] + attr_names[o + 1:]
+                sel5 = feat_size[:o] + feat_size[o + 1:]
+                orig_ind = x.index[x.iloc[:, o] == j].tolist()
+                orig_df = x.take(orig_ind)
+                orig_df=orig_df.drop(orig_df.columns[o], axis =1)
+                orig_df= orig_df.reset_index(drop=True)
+                pert_df = x_pert.take(orig_ind)
+                pert_df=pert_df.drop(pert_df.columns[o], axis=1)
+                pert_df=pert_df.reset_index(drop=True)
+                self.nodes[sel + '#' + str(j)] = Tree.create_node(sel, j, parent, None, 0)
+                Tree.grow_tree(self, self.nodes[sel + '#' + str(j)], sel4, depth - 1, sel5, orig_df, pert_df)
                 j += 1
                 i += self.max
-            # print(self.nodes)
+        else:
+            estimates = Tree.estimate(self, x_pert, self.epsilon_value, feat_size)
+            pos_est = Tree.not_neg(estimates)
+            o = randrange(len(attr_names))
+            sel = attr_names[o]
+            sel2 = feat_size[o]
+            sel3 = pos_est[o]
+            i = 1
+            j = 0
+            while i <= sel2:
+                lis = sel3[i - 1:i + self.max - 1]
+                g = lis.index(max(lis))
+                self.nodes[sel + '#' + str(j)] = Tree.create_node(sel, j, parent, g, 1)
+                j += 1
+                i += self.max
+
             return None
+
     '''unused'''
     def hash_perturb_get0(io):
         return io[0]
     ''''''
-    def fit(self, X, y):
+    def fit(self, x,y, x_pert):
         """
         Fit data
-        @param X: data
+        @param x: data
         @param y: labels
         """
-        # print('X')
-        # print(X)
-        # print('uni3')
-        # print(X['odor'].value_counts())
-        X, y = check_X_y(X, y)
-        self.X_ = X
-        le = len(X)
-        self.X_df_ = pd.DataFrame(X)
-        self.y_ = y
         self.resultType = type(y[0])
-        if self.attrNames is None:
-            self.attrNames = [f'attr{x}' for x in range(len(self.X_[0]))]
-        # print('ass')
-        # print(self.attrNames)
-        # print(self.X_[0])
-        assert (len(self.attrNames) == len(self.X_[0]))
+        if self.depth > len(self.attr_names):
+            self.depth = len(self.attr_names)
 
-        data = [[] for i in range(len(self.attrNames))]
-        categories = []
-
-        for i in range(len(self.X_)):
-            categories.append(str(self.y_[i]))
-            for j in range(len(self.attrNames)):
-                data[j].append(self.X_[i][j])
-        w = Tree.estimate(self, self.X_df_, self.epsilon_value, self.domainSize)
-        # print('w')
-        # print(w)
-        n = Tree.not_neg(w)
-        # print(n)
-        run = Tree.rank(self.X_df_, n, self.max)
-        # print('run')
-        # print(run)
-        # print(len(run))
-        if self.depth > len(run):
-            self.depth = len(run)
-
-        self.tree_ = Tree.grow_tree(self, None,self.attrNames, self.depth, run, self.domainSize, n, le)
+        self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert)
         # print(RenderTree(self.root))
         # print(self.root.children)
-        # print('data')
-        # print(data)
-        # print(categories)
 
-    def decision(root, obs, attrs_names, lis):
+    def decision(root, obs, attr_names):
         """
         Returns the predicted label for a record
         @param obs: the record
-        @param attrs_names: feature names
+        @param attr_names: feature names
         @param lis: empty list
         @return: list of weights along the path to the leaf corresponding to the record
         """
@@ -247,17 +217,17 @@ class Tree(BaseEstimator,ClassifierMixin):
             # print(root.children[0])
             feat = root.children[0].name.split('#')[0]
             # print(feat)
-            feat_ind = attrs_names.index(feat)
+            feat_ind = attr_names.index(feat)
             # print(feat_ind)
             val = obs[feat_ind]
             # print(val)
             path = root.children[val]
-            # print('path')
             # print(path)
-            lis.append(path.count)
-            # print(lis)
-            Tree.decision(path, obs, attrs_names, lis)
-            return lis
+            if path.is_leaf == 1:
+                # print(path.label)
+                return path.label
+            else:
+                return Tree.decision(path, obs, attr_names)
 
 
 
@@ -267,20 +237,13 @@ class Tree(BaseEstimator,ClassifierMixin):
         @param X: record
         @return: label
         """
-        check_is_fitted(self, ['tree_', 'resultType', 'attrNames'])
         X = check_array(X)
-        # print(X)
-        # print(type(X))
         prediction = []
+        # print(len(X))
+        # print(X)
         for i in range(len(X)):
-            answer = Tree.decision(self.root,X[i],self.attrNames, [])
-            # print('ans')
+            answer = Tree.decision(self.root, X[i], self.attr_names)
             # print(answer)
-            g = [sum(j) for j in zip(*answer)]
-            # print(g)
-            prediction.append(g)
-
+            prediction.append(answer)
         # print(prediction)
-        g = [x.index(max(x)) for x in prediction]
-        # print(g)
-        return g
+        return prediction
