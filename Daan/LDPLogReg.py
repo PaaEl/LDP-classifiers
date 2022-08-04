@@ -10,7 +10,7 @@ from sklearn.metrics import accuracy_score
 
 class LDPLogReg(BaseEstimator):
     
-    def __init__(self, epsilon=2, max_iter=25, learning_rate=1, LDPid='DU'):
+    def __init__(self, epsilon=2, max_iter=10, learning_rate=1, LDPid='DU'):
         """ LDP Logistic Regression estimator
         Parameters
         ----------
@@ -112,7 +112,7 @@ class LDPLogReg(BaseEstimator):
             # USE MEAN TO UPDATE WEIGHTS
             tempWeights = tempWeights + learning_rate * meanGradient
             # REGULARIZATION STEP
-            tempWeights = tempWeights - learning_rate * (0.6 / len(y)) * tempWeights     # TODO check optimal regularization value. Now 0.6
+            tempWeights = tempWeights - learning_rate * (0.6 / len(y)) * tempWeights     # The regularization value of 0.6 was taken from the paper by Wang et al.
             # DECREASE LEARNING RATE
             learning_rate = learning_rate - (self.learning_rate / self.max_iter)
         return tempWeights
