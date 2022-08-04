@@ -38,7 +38,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             epsilon = e
             d = do[i]
 
-            server.update_params(epsilon, d)
+            server.update_params(epsilon, do[i])
             # print(server)
             hf = server.get_hash_funcs()
             client.update_params(epsilon, do[i], hash_funcs=hf)

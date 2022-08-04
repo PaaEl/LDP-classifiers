@@ -29,16 +29,18 @@ class Tree(BaseEstimator,ClassifierMixin):
         perturbed_df = pd.DataFrame()
         i = 0
         for x in df.columns:
+            # print(df.columns)
             # print(i)
             epsilon = e
-            d = do[i]
-            i += 1
-            f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
 
-            server.update_params(epsilon, d, f=f)
-            client.update_params(epsilon, d, hash_funcs=server.get_hash_funcs(), f=f)
+            f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
+            if f >= 1:
+                f = 0.99
+            server.update_params(epsilon, do[i], f=f)
+            client.update_params(epsilon, do[i], hash_funcs=server.get_hash_funcs(), f=f)
             tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
             perturbed_df[x] = tempColumn
+            i += 1
         return perturbed_df
 
     '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
@@ -48,8 +50,11 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(df)
         for x in df.columns:
             epsilon = e
-            self.ldpServer.update_params(epsilon, do[i])
-            self.ldpClient.update_params(epsilon, do[i])
+            f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
+            if f >= 1:
+                f = 0.99
+            self.ldpServer.update_params(epsilon, do[i], f=f)
+            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs(), f=f)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
             li = []
             for j in range(0, do[i]):
@@ -201,7 +206,7 @@ class Tree(BaseEstimator,ClassifierMixin):
             self.depth = len(self.attr_names)
 
         self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert)
-        print(RenderTree(self.root))
+        # print(RenderTree(self.root))
         # print(self.root.children)
 
     def decision(root, obs, attr_names):

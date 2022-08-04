@@ -36,11 +36,10 @@ tree_a = tree_pretty
 tree_hr = tree_hr
 tree_rap = tree_rap
 
-ldp_mechanism = {'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
-                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)}
+ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
 epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = [1,2,6]
+depth = [1,2,4]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
 #                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
