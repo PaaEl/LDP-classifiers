@@ -93,6 +93,7 @@ for xxxxx in forest_size:
                     lis_pred = []
                     lis = []
                     lislis = []
+                    servers_l = tree.Tree()
                     # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
                     j = encode(X, c)
                     v = tree.Tree.perturb(j.iloc[:, :-1], epsilon_value, server, client, do)
@@ -108,8 +109,8 @@ for xxxxx in forest_size:
                     for i in range(fo):
                         i += 1
                         clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
-                                        ldpMechanismServer=server, epsilon_value=epsilon_value,
-                                        domainSize=do, max=c)
+                                    ldpMechanismServer=server, epsilon_value=epsilon_value,
+                                    domainSize=do, max=c, tree=servers_l)
                         # train on connected data
                         # X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
                         # to test on data that hasn't been connected

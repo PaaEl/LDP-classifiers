@@ -1,7 +1,8 @@
 import math
 import time as ti
 from datetime import date, time
-
+import sklearn.utils
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
@@ -34,13 +35,13 @@ if f >= 1:
 raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
 tree_a = tree_pretty
-tree_hr = tree_hr
+tree_hr = tree_hr2
 tree_rap = tree_rap
 
-ldp_mechanism = {'hr': (hrc, hrs, tree_hr)}
-database_names=['mushroom']
-epsilon_values=[5]
-depth = [2]
+ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
+database_names=['iris','car','vote','car','nursery','spect','weightliftingexercises','htru']
+epsilon_values=[0.01,0.1,0.5,1,2,3,5]
+depth = [1,2,4 ]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
 #                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
@@ -73,7 +74,7 @@ for xxxx in depth:
         server = a[1]
         print(server)
         client = a[0]
-        ha = a[2]
+        tree = a[2]
         for xx in database_names:
             # getting the data in order
             b = DataPreprocessor.DataPreprocessor()
@@ -91,7 +92,8 @@ for xxxx in depth:
             for epsilon_value in epsilon_values:
                 # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
                 j = encode(X, c)
-                v = ha.Tree.perturb(j.iloc[:, :-1], epsilon_value, server, client, do)
+                servers_l = tree.Tree()
+                v = servers_l.perturb(j.iloc[:, :-1], epsilon_value, server, client, do)
                 # print(X)
                 # print(v)
                 balanced_accuracy = []
@@ -103,9 +105,9 @@ for xxxx in depth:
                 # ten times and get the average
                 for i in range(10):
                     i += 1
-                    clf = ha.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
-                                  ldpMechanismServer=server, epsilon_value=epsilon_value,
-                                  domainSize=do, max=c)
+                    clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
+                                    ldpMechanismServer=server, epsilon_value=epsilon_value,
+                                    domainSize=do, max=c, tree=servers_l)
                     # train on connected data
                     # X_train, X_test, y_train, y_test = train_test_split(v, y, test_size=0.2)
                     # to test on data that hasn't been connected

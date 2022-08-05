@@ -1,15 +1,21 @@
+import copy
 import math
 from random import randrange
 
+import numpy as np
 import pandas as pd
 from anytree import Node, RenderTree
 from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.utils._testing import ignore_warnings
+from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils.validation import check_array, check_is_fitted, check_X_y
-from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer
+from pure_ldp.frequency_oracles import LHClient, LHServer, DEClient, DEServer, HadamardResponseServer, \
+    HadamardResponseClient, RAPPORClient, RAPPORServer
+
 
 class Tree(BaseEstimator,ClassifierMixin):
     def __init__(self, attrNames=None, depth=10, ldpMechanismClient=None, ldpMechanismServer=None,
-                 epsilon_value=None, domainSize=None, max=None):
+                 epsilon_value=None, domainSize=None, max=None, tree=None):
         if attrNames is not None:
             attrNames = [''.join(i for i in x if i.isalnum()).replace(' ', '_') for x in attrNames]
         self.attr_names = attrNames
@@ -21,6 +27,9 @@ class Tree(BaseEstimator,ClassifierMixin):
         self.domainSize = domainSize
         self.max = max
         self.nodes = {}
+        self.servers = []
+        self.hfs = []
+        self.tree = tree
 
     '''From pure ldp, perturbs the data'''
 
@@ -28,45 +37,48 @@ class Tree(BaseEstimator,ClassifierMixin):
         g = client.privatise(io)
         return g
 
-    def perturb(df, e, server, client, do):
+    def perturb(self, df, e, server, client, do):
         perturbed_df = pd.DataFrame()
         i = 0
         for x in df.columns:
-            # print(i)
             epsilon = e
             d = do[i]
-            # i += 1
             f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
             if f >= 1:
                 f = 0.99
-            server.update_params(epsilon, d, f=f)
-            client.update_params(epsilon, d, hash_funcs=server.get_hash_funcs(), f=f)
+            server = RAPPORServer(f, 128, 8, d)
+            self.servers.append(server)
+            hf = server.get_hash_funcs()
+            self.hfs.append(hf)
+            client = RAPPORClient(f, 128, hf, 8)
+            i += 1
             tempColumn = df.loc[:, x].apply(lambda item: Tree.hash_perturb(item + 1, client))
             perturbed_df[x] = tempColumn
-            i += 1
         return perturbed_df
 
     '''Uses pure ldp module to estimate counts for each feature using frequency estimation'''
 
-    def estimate(self, df, e, do):
+    @ignore_warnings(category=ConvergenceWarning)
+    @ignore_warnings(category=RuntimeWarning)
+    def estimate(self, df, e, do, hff, hfs):
         lis = []
         i = 0
-        # print(df)
         for x in df.columns:
             epsilon = e
             f = round(1 / (0.5 * math.exp(epsilon / 2) + 0.5), 2)
             if f >= 1:
                 f = 0.99
-            self.ldpServer.update_params(epsilon, do[i], f=f)
-            self.ldpClient.update_params(epsilon, do[i], hash_funcs=self.ldpServer.get_hash_funcs(), f=f)
+            self.ldpServer = hff[i]
+            hf = hfs[i]
+            self.ldpClient = RAPPORClient(f, 128, hf, 8)
             df.loc[:, x].apply(lambda g: self.ldpServer.aggregate(g))
-            li = []
-            for j in range(0, do[i]):
-                li.append(round(self.ldpServer.estimate(j + 1, suppress_warnings=True)))
-            lis.append(li)
+            self.ldpServer.estimate_all(range(1, do[i] + 1))
+            f = list(self.ldpServer.estimated_data)
+            lis.append(f)
+            self.ldpServer.cohort_count = np.zeros(8)
+            self.ldpServer.bloom_filters = [np.zeros(128) for i in range(0, 8)]
+            self.ldpServer.reset()
             i += 1
-        # print('estimates')
-        # print(len(lis))
         return lis
     '''Negative counts set to 0'''
     def not_neg(lis):
@@ -133,7 +145,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         # print(dfd)
         return Node(feature + '#' + str(value), value = value, parent= parent,  label = label, is_leaf = leaf)
 
-    def grow_tree(self, parent, attr_names, depth, feat_size, x, x_pert):
+    def grow_tree(self, parent, attr_names, depth, feat_size, x, x_pert, hff, hfs):
         """
 
         @param parent: parent node
@@ -145,18 +157,23 @@ class Tree(BaseEstimator,ClassifierMixin):
         @param le: amount of records in total
         @return: tree
         """
-        # print('dep')
-        # print(depth)
+        print('dep')
+        print(depth)
+        print(len(hfs))
         if parent is None:
             self.root = Node('root')
             self.nodes['root'] = self.root
-            Tree.grow_tree(self, self.root, attr_names, depth, feat_size, x, x_pert)
-        elif depth >1:
+            Tree.grow_tree(self, self.root, attr_names, depth, feat_size, x, x_pert, hff, hfs)
+        elif depth > 1:
             o = randrange(len(attr_names))
             sel = attr_names[o]
             sel2 = feat_size[o]
             i = 1
             j = 0
+            hf2 = copy.deepcopy(hff)
+            del hf2[o]
+            hf3 = copy.deepcopy(hfs)
+            del hf3[o]
             while i <= sel2:
                 sel4 = attr_names[:o] + attr_names[o + 1:]
                 sel5 = feat_size[:o] + feat_size[o + 1:]
@@ -168,7 +185,7 @@ class Tree(BaseEstimator,ClassifierMixin):
                 pert_df=pert_df.drop(pert_df.columns[o], axis=1)
                 pert_df=pert_df.reset_index(drop=True)
                 self.nodes[sel + '#' + str(j)] = Tree.create_node(sel, j, parent, None, 0)
-                Tree.grow_tree(self, self.nodes[sel + '#' + str(j)], sel4, depth - 1, sel5, orig_df, pert_df)
+                Tree.grow_tree(self, self.nodes[sel + '#' + str(j)], sel4, depth - 1, sel5, orig_df, pert_df, hf2, hf3)
                 j += 1
                 i += self.max
         else:
@@ -203,7 +220,7 @@ class Tree(BaseEstimator,ClassifierMixin):
         if self.depth > len(self.attr_names):
             self.depth = len(self.attr_names)
 
-        self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert)
+        self.tree_ = Tree.grow_tree(self, None,  self.attr_names,self.depth,self.domainSize, x, x_pert, self.tree.servers, self.tree.hfs)
         # print(RenderTree(self.root))
         # print(self.root.children)
 
