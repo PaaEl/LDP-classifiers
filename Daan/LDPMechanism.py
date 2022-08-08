@@ -52,7 +52,9 @@ class LDPFreqMechanism(LDPMechanism):
                  instance of a pure-ldp server
         """
         if self.LDPid in ["RAPPOR"]:
-            params = {"f": self._convert_eps_to_f(params["epsilon"]), "m":128, "k":8, "d":params["d"]}
+            f = self._convert_eps_to_f(params["epsilon"])
+            f = 0.99 if f >= 1 else f
+            params = {"f": f, "m":128, "k":8, "d":params["d"]}
         return create_fo_server_instance(self.LDPid, params)
 
     def _convert_eps_to_f(self, epsilon):
