@@ -1,20 +1,24 @@
-Below is an example of how to use the TestSuite.
+# Required installation
 
-1. Import all the required classifiers
-2. Instantiate the required classifiers in the 'classifiers' array. Make sure all the required parameters are also included.
-3. Call 'testRun' with the database names you wish to run your test on.
-4. If other values for epsilon are required, change these in the 'set_params' call on the testSuite.
+To be able to run our code, python 3.9.1 is required with the following modules installed:
 
-```
-from Daan.LDPLogReg import LDPLogReg
-from Daan.LDPNaiveBayes import LDPNaiveBayes
-from TestSuite import TestSuite
+- numpy
+- pandas
+- json
+- sklearn
+- scipy
+- pure_ldp
+- statsmodels
+  
+Installing these modules in a linux terminal enviroment can be done using:
 
-def testRun(database_names=[]):
-    classifiers = [LDPNaiveBayes(LDPid="DE")]
-    testSuite = TestSuite(database_names)
-    testSuite.set_params(epsilon_values=[0.01,0.1,0.5,1,2,3,5], classifiers=classifiers, onehotencoded=True)
-    testSuite.run()
+`pip install [module_name]`
 
-testRun(database_names=['adult','mushroom','iris','vote','car','nursery'])
-```
+# Running tests
+
+The test can be run using the `testrun.py` file.
+This file contains a `testrun()` function where the names of the databases, epsilon values and classifiers can be changed. 
+The function will automatically run all tests on all possible combinations.
+The results are written in a .csv file that is stored in the `Experiments` folder.
+
+Terminal command to run the file: `python3 testrun.py`

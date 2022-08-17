@@ -5,7 +5,7 @@ from sklearn.model_selection import cross_validate
 import pandas as pd
 
 class TestSuite():
-    def __init__(self, database_names, epsilon_values=[0.1,1,2], classifiers=[LDPNaiveBayes(LDPid='LH')]):
+    def __init__(self, database_names, epsilon_values=[0.1,1,2], classifiers=[LDPNaiveBayes(LDPid='LH')], onehotencoded=False):
         """
         Parameters
         ----------
@@ -19,6 +19,7 @@ class TestSuite():
         self.database_names = database_names
         self.epsilon_values = epsilon_values
         self.classifiers = classifiers
+        self.onehotencoded = onehotencoded
         self.preprocessor = DataPreprocessor()
 
     
