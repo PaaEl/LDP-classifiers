@@ -1,16 +1,13 @@
 import math
 import time as ti
-from datetime import date, time
-
-from sklearn.datasets import load_iris
+from datetime import date
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
-import tree_pretty_RF
-import tree_pretty_RF_hr
-import tree_pretty_RF_rap
+import RFTree
+import RFTreeHR
+import RFTreeRAP
 import pandas as pd
-from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
-import numpy as np
+from sklearn.model_selection import train_test_split
 import DataPreprocessor
 from pure_ldp.frequency_oracles import DEClient, DEServer, HEServer, HEClient, HadamardResponseServer, \
     HadamardResponseClient, LHServer, LHClient, UEServer, UEClient, RAPPORServer, RAPPORClient
@@ -32,9 +29,9 @@ if f >= 1:
     f = 0.99
 raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
-tree_a = tree_pretty_RF
-tree_hr = tree_pretty_RF_hr
-tree_rap = tree_pretty_RF_rap
+tree_a = RFTree
+tree_hr = RFTreeHR
+tree_rap = RFTreeRAP
 
 ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
 database_names=['mushroom']

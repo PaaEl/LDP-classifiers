@@ -5,10 +5,10 @@ from datetime import date, time
 from sklearn.datasets import load_iris
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
-import tree_pretty
+import DTTree
 import tree_hr
-import tree_hr2
-import tree_rap
+import DTTreeHR
+import DTTreeRAP
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
 import numpy as np

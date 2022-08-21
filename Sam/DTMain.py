@@ -1,18 +1,13 @@
 import math
 import time as ti
-from datetime import date, time
-import sklearn.utils
-from sklearn.exceptions import ConvergenceWarning
-from sklearn.datasets import load_iris
+from datetime import date
 from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
 
-import tree_pretty
-import tree_hr
-import tree_hr2
-import tree_rap
+import DTTree
+import DTTreeHR
+import DTTreeRAP
 import pandas as pd
-from sklearn.model_selection import train_test_split, cross_val_score, cross_validate
-import numpy as np
+from sklearn.model_selection import train_test_split
 import DataPreprocessor
 from pure_ldp.frequency_oracles import DEClient, DEServer, HEServer, HEClient, HadamardResponseServer, \
     HadamardResponseClient, LHServer, LHClient, UEServer, UEClient, RAPPORServer, RAPPORClient
@@ -34,14 +29,14 @@ if f >= 1:
     f = 0.99
 raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
-tree_a = tree_pretty
-tree_hr = tree_hr2
-tree_rap = tree_rap
+tree_a = DTTree
+tree_hr = DTTreeHR
+tree_rap = DTTreeRAP
 
 ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
-database_names=['iris','car','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.01,0.1,0.5,1,2,3,5]
-depth = [1,2,4 ]
+database_names=['htru','weightliftingexercises']
+epsilon_values=[1]
+depth = [4 ]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
 #                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
