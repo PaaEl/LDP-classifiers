@@ -22,3 +22,7 @@ The function will automatically run all tests on all possible combinations.
 The results are written in a .csv file that is stored in the `Experiments` folder.
 
 Terminal command to run the file: `python3 testrun.py`
+
+# Interactive dashboard
+
+Our results are published in an interactive dashboard. Follow this [link](https://docs.google.com/spreadsheets/d/1SncusZoRe3cWCpcUBPrDJqPr6aYOKqwsSkgMqYe0dg8/edit?usp=sharing) to see this document.
