@@ -24,8 +24,8 @@ des = DEServer(epsilon=epsilon, d=d)
 dec = DEClient(epsilon=epsilon, d=d)
 tree_a = DTTreeArt
 ldp_mechanism = {'de': (dec, des, tree_a)}
-database_names=['mushroom']
-epsilon_values=[5]
+database_names=['weightliftingexercises','htru']
+epsilon_values=[0.1,1,5]
 depth = [4 ]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
@@ -120,7 +120,7 @@ for xxxx in depth:
                 recall = []
                 att_acc = []
                 # ten times and get the average
-                for i in range(1):
+                for i in range(10):
                     i += 1
                     print(i)
                     clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
