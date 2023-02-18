@@ -95,64 +95,63 @@ class TestSuite():
         for i in range(1):
             for database_name in self.database_names:
                 X, y = self.preprocessor.get_data(database_name, onehotencoded=self.onehotencoded)
+                print(X)
                 allScoresDataFrame = pd.DataFrame()
                 for classifier in self.classifiers:
                     classifierDataFrame = pd.DataFrame()
                     for epsilon_value in self.epsilon_values:
-                        for i in range(1):
-                            # to randomize
+                        for i in range(10):
                             X, y = sklearn.utils.shuffle(X, y)
-
-                            # to gather the statistics
+                            print(i)
                             balanced_accuracy = []
                             accuracy = []
                             times = []
+                            f1 = []
                             prec = []
                             recall = []
                             att_acc = []
                             mema = []
                             nonmema = []
                             classifier.set_params(epsilon=epsilon_value)
-
-                            # divide the data to create shadow datasets and training and testing sets
                             target_train_size = len(X) // 8
                             x_shadow = X[:target_train_size * 6]
                             y_shadow = y[:target_train_size * 6]
+
                             x_train = X[target_train_size * 6:target_train_size * 7]
                             y_train = y[target_train_size * 6:target_train_size * 7]
                             x_test = X[target_train_size * 7:]
                             y_test = y[target_train_size * 7:]
+                            print('ddddvdsdvdpl,;')
+                            print(x_shadow)
                             x_shadow = x_shadow.reset_index(drop=True)
+                            print(x_shadow)
+                            print(y_shadow)
+                            # y_shadow = y_shadow.reset_index(drop=True)
+                            # x_shadow_test = x_shadow_test.reset_index(drop=True)
+                            y_shadow_test = y[target_train_size * 3:target_train_size * 6]
                             x_train = x_train.reset_index(drop=True)
+                            # y_train = y_train.reset_index(drop=True)
                             x_test = x_test.reset_index(drop=True)
-
-                            # create the model to be attacked
+                            # y_test = y_test.reset_index(drop=True)
+                            print('ddvsdvs')
+                            print(target_train_size)
+                            print(X)
+                            print(x_train)
                             clf = LDPNaiveBayes()
-
-                            # same but for LR
                             # clf = LDPLogReg()
-
-                            # train the model to be attacked
                             clf.fit(x_train, y_train)
-
-                            # predict the test set, to check model accuracy and get nontraining members to attack later
                             start = ti.time()
                             pre = clf.predict(x_test)
                             stop = ti.time()
-
                             balanced_accuracy.append(balanced_accuracy_score(y_test, pre))
                             accuracy.append(accuracy_score(y_test, pre))
                             times.append(stop - start)
-
-                            # to gather the shadow datasets
+                            clfAt = LDPNaiveBayes()
+                            # clfAt = LDPLogReg()
                             x_shadow_train_att= x_shadow[0:0]
                             x_shadow_test_att = x_shadow[0:0]
                             shad_pred = []
                             y_shadow_att = []
-
-                            # create shadow models
-                            clfAt = LDPNaiveBayes()
-                            # clfAt = LDPLogReg()
 
                             for i in range(5):
                                 x_shadow, y_shadow = sklearn.utils.shuffle(x_shadow, y_shadow)
@@ -160,22 +159,21 @@ class TestSuite():
                                 target_train_size = len(x_shadow) // 8
                                 x_shadow_train = x_shadow[target_train_size * 4:]
                                 y_shadow_train = y_shadow[target_train_size * 4:]
+                                print('bvmb')
+                                print(y_shadow_train)
                                 x_shadow_test = x_shadow[:target_train_size * 4]
+                                y_shadow_test = y_shadow[:target_train_size * 4]
                                 clfAt.fit(x_shadow_train, y_shadow_train)
                                 shad_pred = shad_pred + clfAt.predict(x_shadow_test)
                                 y_shadow_att = y_shadow_att + y_shadow_train.tolist()
                                 x_shadow_train_att = pd.concat([x_shadow_train_att, x_shadow_train])
                                 x_shadow_test_att = pd.concat([x_shadow_test_att, x_shadow_test])
 
-                            # to gather the attack models, 1 for each label in the model to be attacked
                             att_list = []
-
-                            # here we create the attack models
                             for i in range(max(y) + 1):
                                 memb = []
                                 non_memb = []
 
-                                # get all the records that have the label of the attack model
                                 for j in range(len(y_shadow_att)):
 
                                     if y_shadow_att[j] == i:
@@ -184,73 +182,87 @@ class TestSuite():
 
                                     if shad_pred[j] == i:
                                         non_memb.append(j)
-
-                                # these are all in the training set of the shadow models
                                 daf = x_shadow_train_att[x_shadow_train_att.index.isin(memb)]
+                                print('kijk')
+                                print(x_shadow_train_att)
+                                print(daf)
                                 memlist = [1] * len(daf)
-
-                                # these are not
                                 daf2 = x_shadow_test_att[x_shadow_test_att.index.isin(non_memb)]
                                 nonmemlist = [0] * len(daf2)
-
                                 dafx = daf.append(daf2)
                                 memlist = memlist + nonmemlist
-
-                                # the attack model
                                 model = GaussianNB()
                                 # model = LogisticRegression()
                                 model.fit(dafx, memlist)
                                 att_list.append(model)
-
-                            # to gather the data
+                            print('dsssss')
+                            print(att_list)
                             precis = []
                             recal = []
                             atac = []
                             memac = []
                             nonmemac = []
-
-                            # using the attack models to predict in which category the training and
-                            # testing data of the original model belongs
                             for i in range(max(y) + 1):
                                 memb = []
                                 non_memb = []
 
-                                # get all the records that have the label of the attack model
                                 for j in range(len(y_train)):
 
                                     if y_train[j] == i:
                                         memb.append(j)
-                                for j in range(len(pre)):
+                                for j in range(len(y_test)):
 
-                                    if pre[j] == i:
+                                    if y_test[j] == i:
                                         non_memb.append(j)
-
-                                # these are all in the training set of the original model
                                 daf = x_train[x_train.index.isin(memb)]
-                                daf = daf.reset_index(drop=True)
-
-                                # these are not
+                                # print('kijk')
+                                print(x_train)
+                                print(memb)
+                                # print(daf)
+                                # memlist = [1] * len(daf)
                                 daf2 = x_test[x_test.index.isin(non_memb)]
-                                daf2 = daf2.reset_index(drop=True)
-
+                                dafx = daf.append(daf2)
+                                print('saaa')
+                                print(daf)
+                                print(daf2)
                                 jaaaaaa = att_list[i].predict(daf)
                                 jaaaaaa2 = att_list[i].predict(daf2)
-
-                                # memacc holds the accuracy of the predictions of the training data, nonmemacc for the testing
+                                print('avds')
+                                print(len(daf) + len(daf2))
+                                print(jaaaaaa)
+                                print(jaaaaaa2)
+                                print(np.count_nonzero(jaaaaaa == 1))
+                                # memacc = jaaaaaa.count(1) / len(daf)
+                                # nonmemacc = jaaaaaa2.count(0) / len(daf2)
                                 memacc = np.count_nonzero(jaaaaaa == 1) / len(daf)
                                 nonmemacc = np.count_nonzero(jaaaaaa == 0) / len(daf2)
-
-                                # total attack accuracy
+                                print(memacc)
+                                print(nonmemacc)
+                                print('bb')
                                 acc = (memacc * len(x_train) + nonmemacc * len(x_test)) / (
                                         len(x_train) + len(x_test))
-
-                                # getting precision and recall
+                                print(acc)
+                                print(len(jaaaaaa))
+                                print(len(jaaaaaa2))
+                                # memlist = [1] * len(daf)
+                                # nonmemlist = [0] * len(daf2)
+                                # memlist= memlist + nonmemlist
+                                # print(len(memlist))
+                                # print('saaaaaa')
+                                # member_acc = sum(jaaaaaa) / len(daf)
+                                # print(member_acc)
+                                # member_acc = sum(jaaaaaa2) / len(daf2)
+                                # # print(member_acc)
+                                # print(calc_precision_recall(np.concatenate((jaaaaaa,
+                                #                                         jaaaaaa2)),
+                                #                             np.concatenate(
+                                #                                 (np.ones(len(daf)), np.zeros(len(daf2)))),positive_value=i))
                                 pr, re = calc_precision_recall(np.concatenate((jaaaaaa,
                                                                                jaaaaaa2)),
                                                                np.concatenate(
                                                                    (np.ones(len(daf)), np.zeros(len(daf2)))),
                                                                positive_value=i)
-
+                                print(pr, re)
                                 precis.append(pr)
                                 recal.append(re)
                                 atac.append(acc)
@@ -261,17 +273,22 @@ class TestSuite():
                             recall.append(sum(recal) / (max(y) + 1))
                             mema.append(sum(memac) / (max(y) + 1))
                             nonmema.append(sum(nonmemac) / (max(y) + 1))
-
-                            # gathering the results
                             scores = {'score_time': times, 'test_accuracy': accuracy,
                                       'test_balanced_accuracy': balanced_accuracy,
                                       'precision': prec, 'recall': recall, 'attack accuracy': att_acc,
                                       'memberattack accuracy': mema, 'nonmemberattack accuracy': nonmema}
+                            # scores = cross_validate(classifier, X, y, scoring=['accuracy', 'balanced_accuracy','f1_macro', 'precision_macro', 'recall_macro'])
+                            # scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
+                            # scoresDataFrame.drop(labels=['fit_time', 'score_time'], inplace=True)
+                            # rowName = classifier.__str__() + '/' + database_name + '/'
+                            # scoresDataFrame = scoresDataFrame.add_prefix(rowName)
+                            # classifierDataFrame[epsilon_value] = scoresDataFrame
                             scoresDataFrame = pd.DataFrame.from_dict(scores).mean()
                             rowName = str(classifier) + '/' + database_name + '/' + 'dpth' + '/'
                             scoresDataFrame = scoresDataFrame.add_prefix(rowName)
                             classifierDataFrame[epsilon_value] = scoresDataFrame
                     allScoresDataFrame = allScoresDataFrame.append(classifierDataFrame)
+                print(allScoresDataFrame)
                 self.print_scores(allScoresDataFrame)
 
     

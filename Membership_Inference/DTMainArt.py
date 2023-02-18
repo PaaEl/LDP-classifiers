@@ -4,20 +4,13 @@ from datetime import date
 
 import numpy as np
 import sklearn
-from sklearn.metrics import balanced_accuracy_score, accuracy_score, f1_score, precision_score, recall_score
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.naive_bayes import GaussianNB
+from sklearn.metrics import balanced_accuracy_score, accuracy_score
 from sklearn.tree import DecisionTreeClassifier
-
-from art.estimators.classification.scikitlearn import ScikitlearnRandomForestClassifier
-import shadow_models
 import DTTree
-import DTTreeHR
 import DTTreeRAP
 import pandas as pd
-from sklearn.model_selection import train_test_split
 import DataPreprocessor
-from Sam2 import shad
+from Membership_Inference import shad
 from pure_ldp.frequency_oracles import DEClient, DEServer, HEServer, HEClient, HadamardResponseServer, \
     HadamardResponseClient, LHServer, LHClient, UEServer, UEClient, RAPPORServer, RAPPORClient
 epsilon = 1
@@ -28,9 +21,8 @@ if f >= 1:
 raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
 tree_a = DTTree
-tree_hr = DTTreeHR
 tree_rap = DTTreeRAP
-shadow_nr =3
+shadow_nr =5
 epsilon = 1
 d = 1
 des = DEServer(epsilon=epsilon, d=d)
@@ -38,7 +30,7 @@ dec = DEClient(epsilon=epsilon, d=d)
 tree_a = DTTree
 ldp_mechanism = {'de': (dec, des, tree_a)}
 database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[1]
+epsilon_values=[0.1,1,5]
 depth = [6 ]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
@@ -61,7 +53,7 @@ def encode(df, c):
     # print(g)
     return g
 
-
+'''Calculates precision and recall'''
 def calc_precision_recall(predicted, actual, positive_value=1):
     score = 0  # both predicted and actual are positive
     num_positive_predicted = 0  # predicted positive
@@ -93,7 +85,6 @@ for xxxx in depth:
     for xxx in ldp_mechanism:
         a = ldp_mechanism[xxx]
         server = a[1]
-        print(server)
         client = a[0]
         tree = a[2]
         for xx in database_names:
@@ -107,26 +98,21 @@ for xxxx in depth:
             do = []
             for x in X.columns:
                 do.append(max(X[x]) + 1)
-
             c = max(y) + 1
             # gets domainsize for each feature
             do = [gg * c for gg in do]
-            print('do')
-            # print(do)
-            print(c)
+
             classifierDataFrame = pd.DataFrame()
             for epsilon_value in epsilon_values:
+                # encode and perturb the data
                 X.insert(len(X.columns), 'label', y)
-                # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
                 j = encode(X, c)
                 print(j)
                 servers_l = tree.Tree()
                 v = servers_l.perturb(j.iloc[:, :-1], epsilon_value, server, client, do)
-                # print(v)
-                # print(X)
                 X = X.drop(columns=['label'])
-                # print(X)
-                # print(v)
+
+                # to gather the statistics
                 balanced_accuracy = []
                 accuracy = []
                 times = []
@@ -136,16 +122,21 @@ for xxxx in depth:
                 att_acc = []
                 mema = []
                 nonmema=[]
-                # ten times and get the average
-                for i in range(10):
+                # loop 10 times
+                for i in range(1):
                     i += 1
-                    print(i)
+
+                    # create the model to be attacked
                     clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
                                     ldpMechanismServer=server, epsilon_value=epsilon_value,
                                     domainSize=do, max=c)
+
+                    # same but for rappor
                     # clf = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
                     #                                 ldpMechanismServer=server, epsilon_value=epsilon_value,
                     #                                 domainSize=do, max=c, tree=servers_l)
+
+                    # divide the data to create shadow datasets and training and testing sets, shuffling happens later
                     target_train_size = len(v) // 4
                     x_shadow = v[:target_train_size * 3]
                     y_shadow = y[:target_train_size * 3]
@@ -159,93 +150,58 @@ for xxxx in depth:
                     x_target_test = x_target_test[:len(x_target_test)//2]
                     y_target_test = y_target_test[:len(y_target_test)// 2]
                     X_target_test = X_target_test[:len(X_target_test)// 2]
-                    # clf2 = tree.Tree(attrNames=feat, depth=depth, ldpMechanismClient=client,
-                    #                  ldpMechanismServer=server, epsilon_value=epsilon_value,
-                    #                  domainSize=do, max=c,)
-                    # clf2.fit(X_shadow,y_shadow,x_shadow)
-                    # print(x_target_test)
-                    # clf.predict(x_target_test)
-                    #                     print('adasa')
-                    # print(x_target_test)
-                    # print(y_target_test.size)
-                    # print(X_target_test)
-                    # y_target_test = y_target_test.reset_index(drop=True)
                     x_target_test = x_target_test.reset_index(drop=True)
                     X_target_test = X_target_test.reset_index(drop=True)
                     x_target_train = x_target_train.reset_index(drop=True)
                     X_target_train = X_target_train.reset_index(drop=True)
-                    # print(X_target_test)
-                    # X_train1, X_test1, y_train1, y_test1 = train_test_split(X.iloc[:, :-1], y, test_size=0.8)
-                    # print(X_train1)
-                    # print('dsgdsacacc')
-                    # print(len(X_target_train))
-                    # print(len(y_target_train))
-                    # print(len(x_target_train))
-                    # print(X_target_train)
-                    # print(y_target_train)
-                    # print(x_target_train)
+
+                    # train the model to be attacked
                     clf.fit(X_target_train, y_target_train, x_target_train)
                     start = ti.time()
+
+                    # predict the test set, to check model accuracy and get nontraining members to attack later
                     pre = clf.predict(X_target_test)
                     stop = ti.time()
 
+                    # to gather the shadow datasets
                     nonmember_y = []
                     member_y = []
                     member_predictions=[]
                     nonmember_predictions =[]
                     member_X= X[0:0]
                     nonmember_X = X[0:0]
-                    for i in range(2):
+
+                    # create shadow models
+                    for i in range(shadow_nr):
                         x_shadow, y_shadow, X_shadow= \
                             sklearn.utils.shuffle(x_shadow, y_shadow, X_shadow)
                         x_shadow = x_shadow.reset_index(drop=True)
                         X_shadow = X_shadow.reset_index(drop=True)
-                        # X.iloc[:, :-1] = X.iloc[:, :-1].reset_index(drop=True)
                         abc = shad.Shad_tree()
                         member_x, member_ya, member_predictionsa, nonmember_Xa, nonmember_ya, \
                         nonmember_predictionsa, member_Xa, nonmember_x = \
                         abc.create_shadow(X_shadow,x_shadow,y_shadow, shadow_nr, clf,X.iloc[:, :-1], y)
+
                         nonmember_y = nonmember_y + nonmember_ya
                         member_y = member_y + member_ya
                         member_predictions = member_predictions + member_predictionsa
                         nonmember_predictions = nonmember_predictions + nonmember_predictionsa
                         member_X= member_X.append(member_Xa)
                         nonmember_X = nonmember_X.append(nonmember_Xa)
-                    # print(member_x, member_y, member_predictions, nonmember_X, nonmember_y, nonmember_predictions)
-                    # print(nonmember_y)
-                    # print(nonmember_predictions)
-                    print(nonmember_X)
+
                     member_X = member_X.reset_index(drop=True)
                     nonmember_X= nonmember_X.reset_index(drop=True)
                     nonmember_x = nonmember_x.reset_index(drop=True)
-                    member_x_arr = member_x.to_numpy()
-                    nonmember_X_arr = nonmember_X.to_numpy()
-                    member_predictions_arr = np.array(member_predictions)
-                    nonmember_predictions_arr = np.array(nonmember_predictions)
-                    member_y_arr = np.array(member_y)
-                    nonmember_y_arr = np.array(nonmember_y)
-                    # print('dsgds')
-                    # print(member_x)
-                    # print(type(member_x))
-                    # print(type(member_predictions_arr))
-                    # print(member_x_arr)
-                    # print(member_y)
-                    # print(type(nonmember_X))
-                    # print(type(nonmember_predictions_arr))
-                    # print(type(member_y))
-                    # print(type(nonmember_y))
-                    # print(len(member_x))
-                    # print(len(member_predictions_arr))
-                    # print(len(nonmember_X))
-                    # print(len(nonmember_predictions_arr))
-                    # print(len(member_y))
-                    # print(len(nonmember_y))
 
+                    # to gather the attack models, 1 for each label in the model to be attacked
                     att_list = []
+
+                    # here we create the attack models
                     for i in range(c):
                         memb = []
                         non_memb = []
 
+                        # get all the records that have the label of the attack model
                         for j in range(len(member_predictions)):
 
                             if member_predictions[j] == i:
@@ -254,106 +210,72 @@ for xxxx in depth:
 
                             if nonmember_predictions[j] == i:
                                 non_memb.append(j)
-                        daf = member_x[member_x.index.isin(memb)]
+
+                        # these are all in the training set of the shadow models
                         dafX = member_X[member_X.index.isin(memb)]
-                        # print(memb)
-                        # print(max(y))
-                        print('kijk')
-                        # print(member_x)
-                        # print(daf)
-                        # print(member_X)
-                        # print(dafX)
                         memlist = [1] * len(dafX)
-                        daf2 = nonmember_x[nonmember_x.index.isin(non_memb)]
+
+                        # these are all not in the training set of the shadow models
                         daf2X = nonmember_X[nonmember_X.index.isin(non_memb)]
-                        # print(nonmember_X)
-                        # print(daf2X)
                         nonmemlist = [0] * len(daf2X)
-                        daf = daf.reset_index(drop=True)
-                        # print(daf)
-                        daf2 = daf2.reset_index(drop=True)
+
                         daf2X = daf2X.reset_index(drop=True)
                         dafX= dafX.reset_index(drop=True)
-                        dafx = daf.append(daf2)
                         dafX = dafX.append(daf2X)
-                        # print(dafx)
                         memlist= memlist + nonmemlist
-                        # print(memlist)
+
+                        # the attack model
                         model = DecisionTreeClassifier()
-                        # print(dafX)
                         model.fit(dafX, memlist)
                         att_list.append(model)
-                        print('should be 1then0')
-                        print(accuracy_score(memlist, model.predict(dafX)))
-                    # print('dsssss')
-                    # print(att_list)
+
+                    # to gather the data
                     precis = []
                     recal = []
                     atac = []
                     memac = []
                     nonmemac = []
+
+                    # using the attack models to predict in which category the training and
+                    # testing data of the original model belongs
                     for i in range(c):
                         memb = []
                         non_memb = []
-
+                        # get all the records that have the label of the attack model
                         for j in range(len(y_target_train)):
 
                             if y_target_train[j] == i:
                                 memb.append(j)
-                        for j in range(len(y_target_test)):
+                        for j in range(len(pre)):
 
-                            if y_target_test[j] == i:
+                            if pre[j] == i:
                                 non_memb.append(j)
+
+                        # these are all in the training set of the original model
                         daf = X_target_train[X_target_train.index.isin(memb)]
-                        # print(memb)
-                        # print(non_memb)
-                        # print('sadsasaassa')
-                        # print(member_x)
-                        # print(daf)
                         daf = daf.reset_index(drop=True)
-                        # memlist = [1] * len(daf)
+
+                        # these are not
                         daf2 = X_target_test[X_target_test.index.isin(non_memb)]
                         daf2 = daf2.reset_index(drop=True)
-                        dafx = daf.append(daf2)
-                        # print('saaa')
-                        # print(daf2)
-                        # print(daf2)
+
                         jaaaaaa = att_list[i].predict(daf)
                         jaaaaaa2 = att_list[i].predict(daf2)
-                        jaaaaaa3 = att_list[i].predict(dafx)
-                        # print('avds')
-                        # print(len(daf)+len(daf2))
-                        # print(jaaaaaa)
-                        # print(jaaaaaa2)
-                        # print(jaaaaaa3)
+
+                        # memacc holds the accuracy of the predictions of the training data, nonmemacc for the testing
                         memacc = np.count_nonzero(jaaaaaa == 1)/ len(daf)
                         nonmemacc = np.count_nonzero(jaaaaaa2 == 0)/len(daf2)
-                        print(memacc)
-                        print(nonmemacc)
-                        print('bb')
+
+                        # total attack accuracy
                         acc = (memacc * len(X_target_train) + nonmemacc * len(X_target_test)) / (
                                     len(X_target_train) + len(X_target_test))
-                        # print(acc)
-                        # print(len(jaaaaaa))
-                        # print(len(jaaaaaa2))
-                        # memlist = [1] * len(daf)
-                        # nonmemlist = [0] * len(daf2)
-                        # memlist= memlist + nonmemlist
-                        # print(len(memlist))
-                        # print('saaaaaa')
-                        # member_acc = sum(jaaaaaa) / len(daf)
-                        # print(member_acc)
-                        # member_acc = sum(jaaaaaa2) / len(daf2)
-                        # # print(member_acc)
-                        # print(calc_precision_recall(np.concatenate((jaaaaaa,
-                        #                                         jaaaaaa2)),
-                        #                             np.concatenate(
-                        #                                 (np.ones(len(daf)), np.zeros(len(daf2)))),positive_value=i))
+
+                        # getting precision and recall
                         pr, re = calc_precision_recall(np.concatenate((jaaaaaa,
                                                                 jaaaaaa2)),
                                                     np.concatenate(
                                                         (np.ones(len(daf)), np.zeros(len(daf2)))),positive_value=i)
-                        print(pr,re)
+
                         precis.append(pr)
                         recal.append(re)
                         atac.append(acc)
@@ -364,8 +286,6 @@ for xxxx in depth:
                     recall.append(sum(recal)/c)
                     mema.append(sum(memac)/c)
                     nonmema.append(sum(nonmemac) / c)
-                    print(prec)
-                    print(recall)
 
 
 
@@ -378,9 +298,6 @@ for xxxx in depth:
                     # gathering the results
                     balanced_accuracy.append(balanced_accuracy_score(y_target_test, pre))
                     accuracy.append(accuracy_score(y_target_test, pre))
-                    # f1.append(f1_score(y_train1, pre, average='weighted'))
-                    # prec.append(precision_score(y_train1, pre, average='weighted'))
-                    # recall.append(recall_score(y_train1, pre, average='weighted'))
                     times.append(stop - start)
 
                 scores = {'score_time': times, 'test_accuracy': accuracy, 'test_balanced_accuracy': balanced_accuracy,

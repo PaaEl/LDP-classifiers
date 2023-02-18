@@ -1,6 +1,6 @@
 from Daan.LDPLogReg import LDPLogReg
-from Daan.LDPNaiveBayes import LDPNaiveBayes
-from TestSuite import TestSuite
+from Sam2.LDPNaiveBayesArt import LDPNaiveBayes
+from Sam2.TestSuiteArt import TestSuite
 
 def testRun(db, clas, ep):
     database_names = db
@@ -15,4 +15,5 @@ def testRun(db, clas, ep):
     testSuite = TestSuite(database_names, epsilon_values, classifiers, onehotencoded=False)
     testSuite.run()
 
-testRun(clas=[LDPNaiveBayes(LDPid="RAPPOR")],db=['iris'],ep=[1])
+testRun(clas=[LDPNaiveBayes(LDPid="RAPPOR"),LDPNaiveBayes(LDPid="DE")],
+        db=['adult','iris','mushroom','vote','car', 'nursery','spect','weightliftingexercises','htru'],ep=[0.1,1,5])

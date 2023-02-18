@@ -34,9 +34,9 @@ tree_hr = DTTreeHR
 tree_rap = DTTreeRAP
 
 ldp_mechanism = {'rap': (rapc, raps, tree_rap)}
-database_names=['htru','weightliftingexercises']
-epsilon_values=[1]
-depth = [4 ]
+database_names=['mushroom']
+epsilon_values=[0.01,0.1,0.5,1,2,3,5]
+depth = [1]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
 #                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
