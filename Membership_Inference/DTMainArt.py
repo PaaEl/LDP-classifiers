@@ -22,16 +22,16 @@ raps = RAPPORServer(f, 128, 8, d)
 rapc = RAPPORClient(f, 128, raps.get_hash_funcs(), 8)
 tree_a = DTTree
 tree_rap = DTTreeRAP
-shadow_nr =5
+shadow_nr =2
 epsilon = 1
 d = 1
 des = DEServer(epsilon=epsilon, d=d)
 dec = DEClient(epsilon=epsilon, d=d)
 tree_a = DTTree
 ldp_mechanism = {'de': (dec, des, tree_a)}
-database_names=['adult','mushroom','iris','vote','car','nursery','spect','weightliftingexercises','htru']
-epsilon_values=[0.1,1,5]
-depth = [6 ]
+database_names=['vote','car','nursery','spect','weightliftingexercises','htru']
+epsilon_values=[30]
+depth = [4 ]
 
 # 'de': (dec, des, tree_a), 'olh': (lhc, lhs, tree_a), 'hr': (hrc, hrs, tree_hr),
 #                  'he': (hec, hes, tree_a), 'oue': (uec, ues, tree_a), 'rap': (rapc, raps, tree_rap)
@@ -235,6 +235,7 @@ for xxxx in depth:
                     atac = []
                     memac = []
                     nonmemac = []
+                    sumlen = []
 
                     # using the attack models to predict in which category the training and
                     # testing data of the original model belongs
@@ -276,16 +277,18 @@ for xxxx in depth:
                                                     np.concatenate(
                                                         (np.ones(len(daf)), np.zeros(len(daf2)))),positive_value=i)
 
-                        precis.append(pr)
-                        recal.append(re)
+                        vc = len(daf) + len(daf2)
+                        sumlen.append(vc)
+                        precis.append(pr * (vc))
+                        recal.append(re * (vc))
                         atac.append(acc)
                         memac.append(memacc)
                         nonmemac.append(nonmemacc)
-                    prec.append(sum(precis)/c)
-                    att_acc.append(sum(atac) / c)
-                    recall.append(sum(recal)/c)
-                    mema.append(sum(memac)/c)
-                    nonmema.append(sum(nonmemac) / c)
+                    prec.append(sum(precis) / (sum(sumlen)))
+                    att_acc.append(sum(atac) / (max(y) + 1))
+                    recall.append(sum(recal) / (sum(sumlen)))
+                    mema.append(sum(memac) / (max(y) + 1))
+                    nonmema.append(sum(nonmemac) / (max(y) + 1))
 
 
 
